@@ -1,0 +1,6 @@
+@AutoNext.Platform.Listings.API_HostAddress = http://localhost:5232
+
+GET {{AutoNext.Platform.Listings.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
