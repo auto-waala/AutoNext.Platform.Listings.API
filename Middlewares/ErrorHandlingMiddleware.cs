@@ -1,5 +1,4 @@
-﻿using AutoNext.Platform.Listings.Models.Common;
-using Serilog;
+﻿using Serilog;
 using System.Net;
 using System.Text.Json;
 
