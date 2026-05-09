@@ -1,3 +1,9 @@
 <Solution>
+  <Project Path="../AutoNext.Platform.Listings.Caching/AutoNext.Platform.Listings.Caching.csproj" Id="d5125e26-2e44-4d32-9920-5be7c7749f7f" />
+  <Project Path="../AutoNext.Platform.Listings.Configurations/AutoNext.Platform.Listings.Configurations.csproj" Id="0b4f42fa-6fb8-42cc-9437-9fe7ad4ea6b6" />
+  <Project Path="../AutoNext.Platform.Listings.Models/AutoNext.Platform.Listings.Models.csproj" Id="becca4fe-3e9e-4aa2-a0a2-625a86f0926e" />
+  <Project Path="../AutoNext.Platform.Listings.Repositories/AutoNext.Platform.Listings.Repositories.csproj" Id="16d0498b-e6f2-40a1-9251-7f963739eedf" />
+  <Project Path="../AutoNext.Platform.Listings.Services/AutoNext.Platform.Listings.Services.csproj" Id="7215444f-5bc1-403d-9dd0-011655dea10b" />
+  <Project Path="../AutoNext.Platform.Listings.WebJobs/AutoNext.Platform.Listings.WebJobs.csproj" Id="03704815-b654-4743-b759-42b14855d89f" />
   <Project Path="AutoNext.Platform.Listings.API.csproj" />
 </Solution>
