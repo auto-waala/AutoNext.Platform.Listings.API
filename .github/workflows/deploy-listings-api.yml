@@ -29,22 +29,17 @@ jobs:
       - name: Publish API for Production
         run: dotnet publish AutoNext.Platform.Listings.API.csproj --configuration Release --output ./publish/prod -p:EnvironmentName=Production
 
+      - name: Copy web.config to Dev package
+        shell: bash
+        run: cp web.config ./publish/dev/web.config
+
+      - name: Copy web.config to Prod package
+        shell: bash
+        run: cp web.config ./publish/prod/web.config
+
       - name: Prepare Dev deployment package
         shell: bash
         run: |
-          if [ ! -f "./publish/dev/web.config" ]; then
-            cat > ./publish/dev/web.config << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <system.webServer>
-    <handlers>
-      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
-    </handlers>
-    <aspNetCore processPath="dotnet" arguments="AutoNext.Platform.Listings.API.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
-  </system.webServer>
-</configuration>
-EOF
-          fi
           echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/dev/deployment-info.txt
           echo "Commit SHA: ${{ github.sha }}" >> ./publish/dev/deployment-info.txt
           echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/dev/deployment-info.txt
@@ -52,19 +47,6 @@ EOF
       - name: Prepare Prod deployment package
         shell: bash
         run: |
-          if [ ! -f "./publish/prod/web.config" ]; then
-            cat > ./publish/prod/web.config << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <system.webServer>
-    <handlers>
-      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
-    </handlers>
-    <aspNetCore processPath="dotnet" arguments="AutoNext.Platform.Listings.API.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
-  </system.webServer>
-</configuration>
-EOF
-          fi
           echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/prod/deployment-info.txt
           echo "Commit SHA: ${{ github.sha }}" >> ./publish/prod/deployment-info.txt
           echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/prod/deployment-info.txt
