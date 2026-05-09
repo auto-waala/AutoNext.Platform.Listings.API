@@ -24,18 +24,10 @@ jobs:
         run: dotnet restore AutoNext.Platform.Listings.API.csproj
 
       - name: Publish API for Development
-        run: |
-          dotnet publish AutoNext.Platform.Listings.API.csproj `
-            --configuration Release `
-            --output ./publish/dev `
-            -p:EnvironmentName=Development
+        run: dotnet publish AutoNext.Platform.Listings.API.csproj --configuration Release --output ./publish/dev -p:EnvironmentName=Development
 
       - name: Publish API for Production
-        run: |
-          dotnet publish AutoNext.Platform.Listings.API.csproj `
-            --configuration Release `
-            --output ./publish/prod `
-            -p:EnvironmentName=Production
+        run: dotnet publish AutoNext.Platform.Listings.API.csproj --configuration Release --output ./publish/prod -p:EnvironmentName=Production
 
       - name: Prepare Dev deployment package
         shell: bash
