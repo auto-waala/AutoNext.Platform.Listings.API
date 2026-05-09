@@ -24,35 +24,22 @@ jobs:
         run: dotnet restore AutoNext.Platform.Listings.API.csproj
 
       - name: Publish API for Development
-        run: |
-          dotnet publish AutoNext.Platform.Listings.API.csproj `
-            --configuration Release `
-            --output ./publish/dev `
-            -p:EnvironmentName=Development
+        run: dotnet publish AutoNext.Platform.Listings.API.csproj --configuration Release --output ./publish/dev -p:EnvironmentName=Development
 
       - name: Publish API for Production
-        run: |
-          dotnet publish AutoNext.Platform.Listings.API.csproj `
-            --configuration Release `
-            --output ./publish/prod `
-            -p:EnvironmentName=Production
+        run: dotnet publish AutoNext.Platform.Listings.API.csproj --configuration Release --output ./publish/prod -p:EnvironmentName=Production
+
+      - name: Copy web.config to Dev package
+        shell: bash
+        run: cp web.config ./publish/dev/web.config
+
+      - name: Copy web.config to Prod package
+        shell: bash
+        run: cp web.config ./publish/prod/web.config
 
       - name: Prepare Dev deployment package
         shell: bash
         run: |
-          if [ ! -f "./publish/dev/web.config" ]; then
-            cat > ./publish/dev/web.config << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <system.webServer>
-    <handlers>
-      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
-    </handlers>
-    <aspNetCore processPath="dotnet" arguments="AutoNext.Platform.Listings.API.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
-  </system.webServer>
-</configuration>
-EOF
-          fi
           echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/dev/deployment-info.txt
           echo "Commit SHA: ${{ github.sha }}" >> ./publish/dev/deployment-info.txt
           echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/dev/deployment-info.txt
@@ -60,65 +47,35 @@ EOF
       - name: Prepare Prod deployment package
         shell: bash
         run: |
-          if [ ! -f "./publish/prod/web.config" ]; then
-            cat > ./publish/prod/web.config << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <system.webServer>
-    <handlers>
-      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
-    </handlers>
-    <aspNetCore processPath="dotnet" arguments="AutoNext.Platform.Listings.API.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
-  </system.webServer>
-</configuration>
-EOF
-          fi
           echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/prod/deployment-info.txt
           echo "Commit SHA: ${{ github.sha }}" >> ./publish/prod/deployment-info.txt
           echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/prod/deployment-info.txt
 
-      - name: Create environment specific configs
+      - name: Inject Dev secrets into config
         shell: bash
+        env:
+          MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
+          JWT_DEV_KEY: ${{ secrets.JWT_DEV_KEY }}
         run: |
-          cat > ./publish/dev/appsettings.Development.json << 'EOF'
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Debug",
-      "Microsoft.AspNetCore": "Information"
-    }
-  },
-  "MongoDB": {
-    "ConnectionString": "${{ secrets.MONGODB_DEV_CONNECTION_STRING }}",
-    "DatabaseName": "Autonext_Listings_Dev"
-  },
-  "Jwt": {
-    "Key": "${{ secrets.JWT_DEV_KEY }}",
-    "Issuer": "https://autonext-listings-dev.services.azurewebsites.betalen.in",
-    "Audience": "https://autonext-gateway-dev.services.azurewebsites.betalen.in"
-  }
-}
-EOF
+          sed \
+            -e "s|__MONGODB_DEV_CONNECTION_STRING__|${MONGODB_DEV_CONNECTION_STRING}|g" \
+            -e "s|__JWT_DEV_KEY__|${JWT_DEV_KEY}|g" \
+            appsettings.Development.json > ./publish/dev/appsettings.Development.json
 
-          cat > ./publish/prod/appsettings.Production.json << 'EOF'
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Warning",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "MongoDB": {
-    "ConnectionString": "${{ secrets.MONGODB_PROD_CONNECTION_STRING }}",
-    "DatabaseName": "Autonext_Listings_Prod"
-  },
-  "Jwt": {
-    "Key": "${{ secrets.JWT_PROD_KEY }}",
-    "Issuer": "https://autonext-listings-prod.services.azurewebsites.betalen.in",
-    "Audience": "https://autonext-gateway-prod.services.azurewebsites.betalen.in"
-  }
-}
-EOF
+      - name: Inject Prod secrets into config
+        shell: bash
+        env:
+          MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
+          REDIS_PROD_CONNECTION_STRING: ${{ secrets.REDIS_PROD_CONNECTION_STRING }}
+          JWT_PROD_KEY: ${{ secrets.JWT_PROD_KEY }}
+          APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
+        run: |
+          sed \
+            -e "s|__MONGODB_PROD_CONNECTION_STRING__|${MONGODB_PROD_CONNECTION_STRING}|g" \
+            -e "s|__REDIS_PROD_CONNECTION_STRING__|${REDIS_PROD_CONNECTION_STRING}|g" \
+            -e "s|__JWT_PROD_KEY__|${JWT_PROD_KEY}|g" \
+            -e "s|__APPINSIGHTS_CONNECTION_STRING__|${APPINSIGHTS_CONNECTION_STRING}|g" \
+            appsettings.Production.json > ./publish/prod/appsettings.Production.json
 
       - name: Upload Dev artifact
         uses: actions/upload-artifact@v4
