@@ -1,0 +1,278 @@
+name: Deploy AutoNext.Platform.Listings.API to Dev and Production
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [master, main]
+
+jobs:
+  # ==================== BUILD ONCE ====================
+  build:
+    if: github.event.pull_request.merged == true
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore AutoNext.Platform.Listings.API.csproj
+
+      - name: Publish API for Development
+        run: |
+          dotnet publish AutoNext.Platform.Listings.API.csproj `
+            --configuration Release `
+            --output ./publish/dev `
+            -p:EnvironmentName=Development
+
+      - name: Publish API for Production
+        run: |
+          dotnet publish AutoNext.Platform.Listings.API.csproj `
+            --configuration Release `
+            --output ./publish/prod `
+            -p:EnvironmentName=Production
+
+      - name: Prepare Dev deployment package
+        shell: bash
+        run: |
+          if [ ! -f "./publish/dev/web.config" ]; then
+            # Create web.config for IIS if needed
+            cat > ./publish/dev/web.config << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+    </handlers>
+    <aspNetCore processPath="dotnet" arguments="AutoNext.Platform.Listings.API.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
+  </system.webServer>
+</configuration>
+EOF
+          fi
+          echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/dev/deployment-info.txt
+          echo "Commit SHA: ${{ github.sha }}" >> ./publish/dev/deployment-info.txt
+          echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/dev/deployment-info.txt
+
+      - name: Prepare Prod deployment package
+        shell: bash
+        run: |
+          if [ ! -f "./publish/prod/web.config" ]; then
+            # Create web.config for IIS if needed
+            cat > ./publish/prod/web.config << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+    </handlers>
+    <aspNetCore processPath="dotnet" arguments="AutoNext.Platform.Listings.API.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
+  </system.webServer>
+</configuration>
+EOF
+          fi
+          echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/prod/deployment-info.txt
+          echo "Commit SHA: ${{ github.sha }}" >> ./publish/prod/deployment-info.txt
+          echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/prod/deployment-info.txt
+
+      - name: Create environment specific configs
+        shell: bash
+        run: |
+          # Create appsettings.Development.json for Dev environment
+          cat > ./publish/dev/appsettings.Development.json << 'EOF'
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information"
+    }
+  },
+  "MongoDB": {
+    "ConnectionString": "${{ secrets.MONGODB_DEV_CONNECTION_STRING }}",
+    "DatabaseName": "Autonext_Listings_Dev"
+  },
+  "Jwt": {
+    "Key": "${{ secrets.JWT_DEV_KEY }}",
+    "Issuer": "https://autonext-listings-dev.services.azurewebsites.betalen.in",
+    "Audience": "https://autonext-gateway-dev.services.azurewebsites.betalen.in"
+  }
+}
+EOF
+
+          # Create appsettings.Production.json for Prod environment
+          cat > ./publish/prod/appsettings.Production.json << 'EOF'
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "MongoDB": {
+    "ConnectionString": "${{ secrets.MONGODB_PROD_CONNECTION_STRING }}",
+    "DatabaseName": "Autonext_Listings_Prod"
+  },
+  "Jwt": {
+    "Key": "${{ secrets.JWT_PROD_KEY }}",
+    "Issuer": "https://autonext-listings-prod.services.azurewebsites.betalen.in",
+    "Audience": "https://autonext-gateway-prod.services.azurewebsites.betalen.in"
+  }
+}
+EOF
+
+      - name: Upload Dev artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-dev
+          path: ./publish/dev/
+          retention-days: 1
+
+      - name: Upload Prod artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-prod
+          path: ./publish/prod/
+          retention-days: 1
+
+  # ==================== DEPLOY TO DEVELOPMENT ====================
+  deploy-dev:
+    needs: build
+    runs-on: windows-latest
+    environment: Development
+
+    steps:
+      - name: Download Dev artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-dev
+          path: ./publish/dev/
+
+      - name: Deploy to Dev via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./publish/dev/
+          server-dir: ${{ secrets.FTP_DEV_PATH }}/
+          port: 21
+          timeout: 120000
+          retry: 5
+          retry-delay: 5000
+          log: verbose
+          state-name: .ftp-deploy-sync-state-dev.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/Logs/**
+            **/*.log
+            **/*.ldf
+            **/*.mdf
+            **/appsettings.Production.json
+
+      - name: Verify Dev deployment
+        shell: bash
+        run: |
+          echo "=========================================="
+          echo "✅ DEVELOPMENT DEPLOYMENT COMPLETED"
+          echo "=========================================="
+          echo "Environment : Development"
+          echo "URL         : https://autonext-listings-dev.services.azurewebsites.betalen.in"
+          echo "Swagger     : https://autonext-listings-dev.services.azurewebsites.betalen.in/swagger"
+          echo "Health      : https://autonext-listings-dev.services.azurewebsites.betalen.in/health"
+          echo "Timestamp   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Commit SHA  : ${{ github.sha }}"
+          echo "PR Number   : #${{ github.event.pull_request.number }}"
+          echo "=========================================="
+
+  # ==================== DEPLOY TO PRODUCTION ====================
+  deploy-production:
+    needs: deploy-dev
+    runs-on: windows-latest
+    environment: Production
+
+    steps:
+      - name: Download Prod artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: publish-prod
+          path: ./publish/prod/
+
+      - name: Deploy to Prod via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./publish/prod/
+          server-dir: ${{ secrets.FTP_PROD_PATH }}/
+          port: 21
+          timeout: 120000
+          retry: 5
+          retry-delay: 5000
+          log: verbose
+          state-name: .ftp-deploy-sync-state-prod.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/Logs/**
+            **/*.log
+            **/*.ldf
+            **/*.mdf
+            **/appsettings.Development.json
+
+      - name: Verify Prod deployment
+        shell: bash
+        run: |
+          echo "=========================================="
+          echo "✅ PRODUCTION DEPLOYMENT COMPLETED"
+          echo "=========================================="
+          echo "Environment : Production"
+          echo "URL         : https://autonext-listings-prod.services.azurewebsites.betalen.in"
+          echo "Swagger     : https://autonext-listings-prod.services.azurewebsites.betalen.in/swagger"
+          echo "Health      : https://autonext-listings-prod.services.azurewebsites.betalen.in/health"
+          echo "Timestamp   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Commit SHA  : ${{ github.sha }}"
+          echo "PR Number   : #${{ github.event.pull_request.number }}"
+          echo "=========================================="
+
+  # ==================== POST DEPLOYMENT TESTS ====================
+  test-dev:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: Development
+
+    steps:
+      - name: Test Dev API Health
+        run: |
+          echo "Testing Dev API Health..."
+          curl -f https://autonext-listings-dev.services.azurewebsites.betalen.in/health || exit 1
+          echo "✅ Dev API Health Check Passed"
+
+      - name: Test Dev API Version
+        run: |
+          echo "Testing Dev API Version..."
+          curl -f https://autonext-listings-dev.services.azurewebsites.betalen.in/api/vehicles/version || exit 1
+          echo "✅ Dev API Version Check Passed"
+
+  test-production:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    environment: Production
+
+    steps:
+      - name: Test Prod API Health
+        run: |
+          echo "Testing Production API Health..."
+          curl -f https://autonext-listings-prod.services.azurewebsites.betalen.in/health || exit 1
+          echo "✅ Production API Health Check Passed"
+
+      - name: Test Prod API Version
+        run: |
+          echo "Testing Production API Version..."
+          curl -f https://autonext-listings-prod.services.azurewebsites.betalen.in/api/vehicles/version || exit 1
+          echo "✅ Production API Version Check Passed"
