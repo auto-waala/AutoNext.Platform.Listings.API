@@ -1,6 +1,6 @@
-﻿using AutoNext.Platform.Listings.Models.Common;
-using AutoNext.Platform.Listings.Models.DTOs;
-using AutoNext.Platform.Listings.Services;
+﻿using AutoNext.Platform.Listings.API.Models.Common;
+using AutoNext.Platform.Listings.API.Models.DTOs;
+using AutoNext.Platform.Listings.API.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

@@ -46,13 +46,4 @@
 		<Folder Include="Logs\" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\AutoNext.Platform.Listings.Caching\AutoNext.Platform.Listings.Caching.csproj" />
-	  <ProjectReference Include="..\AutoNext.Platform.Listings.Configurations\AutoNext.Platform.Listings.Configurations.csproj" />
-	  <ProjectReference Include="..\AutoNext.Platform.Listings.Models\AutoNext.Platform.Listings.Models.csproj" />
-	  <ProjectReference Include="..\AutoNext.Platform.Listings.Repositories\AutoNext.Platform.Listings.Repositories.csproj" />
-	  <ProjectReference Include="..\AutoNext.Platform.Listings.Services\AutoNext.Platform.Listings.Services.csproj" />
-	  <ProjectReference Include="..\AutoNext.Platform.Listings.WebJobs\AutoNext.Platform.Listings.WebJobs.csproj" />
-	</ItemGroup>
-
 </Project>

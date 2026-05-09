@@ -1,8 +1,8 @@
-using AutoNext.Platform.Listings.Configurations;
+using AutoNext.Platform.Listings.API.Configurations;
 using AutoNext.Platform.Listings.API.Middlewares;
-using AutoNext.Platform.Listings.Repositories;
-using AutoNext.Platform.Listings.Models.Entities;
-using AutoNext.Platform.Listings.Services;
+using AutoNext.Platform.Listings.API.Repositories;
+using AutoNext.Platform.Listings.API.Models.Entities;
+using AutoNext.Platform.Listings.API.Services;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
