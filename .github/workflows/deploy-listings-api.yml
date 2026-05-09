@@ -41,7 +41,6 @@ jobs:
         shell: bash
         run: |
           if [ ! -f "./publish/dev/web.config" ]; then
-            # Create web.config for IIS if needed
             cat > ./publish/dev/web.config << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -62,7 +61,6 @@ EOF
         shell: bash
         run: |
           if [ ! -f "./publish/prod/web.config" ]; then
-            # Create web.config for IIS if needed
             cat > ./publish/prod/web.config << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -82,7 +80,6 @@ EOF
       - name: Create environment specific configs
         shell: bash
         run: |
-          # Create appsettings.Development.json for Dev environment
           cat > ./publish/dev/appsettings.Development.json << 'EOF'
 {
   "Logging": {
@@ -103,7 +100,6 @@ EOF
 }
 EOF
 
-          # Create appsettings.Production.json for Prod environment
           cat > ./publish/prod/appsettings.Production.json << 'EOF'
 {
   "Logging": {
@@ -160,34 +156,6 @@ EOF
           local-dir: ./publish/dev/
           server-dir: ${{ secrets.FTP_DEV_PATH }}/
           port: 21
-          timeout: 120000
-          retry: 5
-          retry-delay: 5000
-          log: verbose
-          state-name: .ftp-deploy-sync-state-dev.json
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/Logs/**
-            **/*.log
-            **/*.ldf
-            **/*.mdf
-            **/appsettings.Production.json
-
-      - name: Verify Dev deployment
-        shell: bash
-        run: |
-          echo "=========================================="
-          echo "✅ DEVELOPMENT DEPLOYMENT COMPLETED"
-          echo "=========================================="
-          echo "Environment : Development"
-          echo "URL         : https://autonext-listings-dev.services.azurewebsites.betalen.in"
-          echo "Swagger     : https://autonext-listings-dev.services.azurewebsites.betalen.in/swagger"
-          echo "Health      : https://autonext-listings-dev.services.azurewebsites.betalen.in/health"
-          echo "Timestamp   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "Commit SHA  : ${{ github.sha }}"
-          echo "PR Number   : #${{ github.event.pull_request.number }}"
-          echo "=========================================="
 
   # ==================== DEPLOY TO PRODUCTION ====================
   deploy-production:
@@ -211,68 +179,3 @@ EOF
           local-dir: ./publish/prod/
           server-dir: ${{ secrets.FTP_PROD_PATH }}/
           port: 21
-          timeout: 120000
-          retry: 5
-          retry-delay: 5000
-          log: verbose
-          state-name: .ftp-deploy-sync-state-prod.json
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/Logs/**
-            **/*.log
-            **/*.ldf
-            **/*.mdf
-            **/appsettings.Development.json
-
-      - name: Verify Prod deployment
-        shell: bash
-        run: |
-          echo "=========================================="
-          echo "✅ PRODUCTION DEPLOYMENT COMPLETED"
-          echo "=========================================="
-          echo "Environment : Production"
-          echo "URL         : https://autonext-listings-prod.services.azurewebsites.betalen.in"
-          echo "Swagger     : https://autonext-listings-prod.services.azurewebsites.betalen.in/swagger"
-          echo "Health      : https://autonext-listings-prod.services.azurewebsites.betalen.in/health"
-          echo "Timestamp   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "Commit SHA  : ${{ github.sha }}"
-          echo "PR Number   : #${{ github.event.pull_request.number }}"
-          echo "=========================================="
-
-  # ==================== POST DEPLOYMENT TESTS ====================
-  test-dev:
-    needs: deploy-dev
-    runs-on: ubuntu-latest
-    environment: Development
-
-    steps:
-      - name: Test Dev API Health
-        run: |
-          echo "Testing Dev API Health..."
-          curl -f https://autonext-listings-dev.services.azurewebsites.betalen.in/health || exit 1
-          echo "✅ Dev API Health Check Passed"
-
-      - name: Test Dev API Version
-        run: |
-          echo "Testing Dev API Version..."
-          curl -f https://autonext-listings-dev.services.azurewebsites.betalen.in/api/vehicles/version || exit 1
-          echo "✅ Dev API Version Check Passed"
-
-  test-production:
-    needs: deploy-production
-    runs-on: ubuntu-latest
-    environment: Production
-
-    steps:
-      - name: Test Prod API Health
-        run: |
-          echo "Testing Production API Health..."
-          curl -f https://autonext-listings-prod.services.azurewebsites.betalen.in/health || exit 1
-          echo "✅ Production API Health Check Passed"
-
-      - name: Test Prod API Version
-        run: |
-          echo "Testing Production API Version..."
-          curl -f https://autonext-listings-prod.services.azurewebsites.betalen.in/api/vehicles/version || exit 1
-          echo "✅ Production API Version Check Passed"
