@@ -21,30 +21,18 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             _logger = logger;
         }
 
-        /// <summary>
-        /// Get all vehicles with pagination
-        /// </summary>
-        /// <param name="page">Page number (default: 1)</param>
-        /// <param name="pageSize">Items per page (default: 10, max: 50)</param>
-        /// <returns>List of vehicles</returns>
         [HttpGet]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             _logger.LogInformation("API v1 - Getting all vehicles - Page: {Page}, PageSize: {PageSize}", page, pageSize);
 
-            // Limit page size to 50
             pageSize = Math.Min(pageSize, 50);
 
             var result = await _vehicleService.GetAllAsync(page, pageSize);
             return Ok(ApiResponse<PagedResult<VehicleDto>>.Ok(result, "Vehicles retrieved successfully"));
         }
 
-        /// <summary>
-        /// Get vehicle by ID
-        /// </summary>
-        /// <param name="id">Vehicle ID</param>
-        /// <returns>Vehicle details</returns>
         [HttpGet("{id}")]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> GetById(string id)
@@ -58,11 +46,6 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             return Ok(ApiResponse<VehicleDto>.Ok(vehicle, "Vehicle retrieved successfully"));
         }
 
-        /// <summary>
-        /// Search vehicles
-        /// </summary>
-        /// <param name="request">Search criteria</param>
-        /// <returns>Matching vehicles</returns>
         [HttpGet("search")]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> Search([FromQuery] VehicleSearchRequest request)
@@ -74,11 +57,6 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             return Ok(ApiResponse<PagedResult<VehicleDto>>.Ok(vehicles, "Search completed successfully"));
         }
 
-        /// <summary>
-        /// Create a new vehicle listing
-        /// </summary>
-        /// <param name="request">Vehicle details</param>
-        /// <returns>Created vehicle</returns>
         [HttpPost]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> Create([FromBody] CreateVehicleRequest request)
@@ -88,7 +66,6 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<VehicleDto>.Error("Invalid request", 400));
 
-            // In real app, get seller ID from JWT token
             var sellerId = "temp_seller_123";
 
             var vehicle = await _vehicleService.CreateAsync(request, sellerId);
@@ -96,12 +73,6 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
                 ApiResponse<VehicleDto>.Created(vehicle, "Vehicle created successfully"));
         }
 
-        /// <summary>
-        /// Update an existing vehicle
-        /// </summary>
-        /// <param name="id">Vehicle ID</param>
-        /// <param name="request">Updated vehicle details</param>
-        /// <returns>Updated vehicle</returns>
         [HttpPut("{id}")]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> Update(string id, [FromBody] UpdateVehicleRequest request)
@@ -115,11 +86,6 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             return Ok(ApiResponse<VehicleDto>.Ok(vehicle, "Vehicle updated successfully"));
         }
 
-        /// <summary>
-        /// Delete a vehicle
-        /// </summary>
-        /// <param name="id">Vehicle ID</param>
-        /// <returns>Success message</returns>
         [HttpDelete("{id}")]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> Delete(string id)
