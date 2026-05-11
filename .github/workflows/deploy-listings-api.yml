@@ -57,7 +57,21 @@ jobs:
           "@
           Set-Content -Path ./publish/prod/deployment-info.txt -Value $info
 
-      - name: Inject Dev secrets into config
+      # ==================== INJECT DEV CONFIGURATIONS ====================
+      - name: Inject Dev secrets into appsettings.json
+        shell: pwsh
+        env:
+          MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
+          JWT_DEV_KEY: ${{ secrets.JWT_DEV_KEY }}
+        run: |
+          # Update base appsettings.json for Dev
+          $content = Get-Content -Path appsettings.json -Raw
+          $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+          $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+          $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
+          Set-Content -Path ./publish/dev/appsettings.json -Value $content -NoNewline
+
+      - name: Inject Dev secrets into appsettings.Development.json
         shell: pwsh
         env:
           MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
@@ -68,7 +82,25 @@ jobs:
           $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
           Set-Content -Path ./publish/dev/appsettings.Development.json -Value $content -NoNewline
 
-      - name: Inject Prod secrets into config
+      # ==================== INJECT PROD CONFIGURATIONS ====================
+      - name: Inject Prod secrets into appsettings.json
+        shell: pwsh
+        env:
+          MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
+          REDIS_PROD_CONNECTION_STRING: ${{ secrets.REDIS_PROD_CONNECTION_STRING }}
+          JWT_PROD_KEY: ${{ secrets.JWT_PROD_KEY }}
+          APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
+        run: |
+          # Update base appsettings.json for Prod
+          $content = Get-Content -Path appsettings.json -Raw
+          $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+          $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+          $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_PROD_KEY
+          $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
+          $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
+          Set-Content -Path ./publish/prod/appsettings.json -Value $content -NoNewline
+
+      - name: Inject Prod secrets into appsettings.Production.json
         shell: pwsh
         env:
           MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
@@ -83,24 +115,43 @@ jobs:
           $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
           Set-Content -Path ./publish/prod/appsettings.Production.json -Value $content -NoNewline
 
+      # ==================== VERIFY CONFIGURATIONS ====================
       - name: Verify Dev config (mask sensitive values)
         shell: pwsh
         run: |
-          $content = Get-Content ./publish/dev/appsettings.Development.json -Raw
+          Write-Host "Verifying Dev appsettings.json..."
+          $content = Get-Content ./publish/dev/appsettings.json -Raw
           if ($content -match '__\w+__') {
-            Write-Error "Dev config still contains unreplaced placeholders: $($Matches[0])"
+            Write-Error "Dev appsettings.json still contains unreplaced placeholders: $($Matches[0])"
             exit 1
           }
+          
+          Write-Host "Verifying Dev appsettings.Development.json..."
+          $content = Get-Content ./publish/dev/appsettings.Development.json -Raw
+          if ($content -match '__\w+__') {
+            Write-Error "Dev appsettings.Development.json still contains unreplaced placeholders: $($Matches[0])"
+            exit 1
+          }
+          
           Write-Host "Dev config injection verified successfully"
 
       - name: Verify Prod config (mask sensitive values)
         shell: pwsh
         run: |
-          $content = Get-Content ./publish/prod/appsettings.Production.json -Raw
+          Write-Host "Verifying Prod appsettings.json..."
+          $content = Get-Content ./publish/prod/appsettings.json -Raw
           if ($content -match '__\w+__') {
-            Write-Error "Prod config still contains unreplaced placeholders: $($Matches[0])"
+            Write-Error "Prod appsettings.json still contains unreplaced placeholders: $($Matches[0])"
             exit 1
           }
+          
+          Write-Host "Verifying Prod appsettings.Production.json..."
+          $content = Get-Content ./publish/prod/appsettings.Production.json -Raw
+          if ($content -match '__\w+__') {
+            Write-Error "Prod appsettings.Production.json still contains unreplaced placeholders: $($Matches[0])"
+            exit 1
+          }
+          
           Write-Host "Prod config injection verified successfully"
 
       - name: Upload Dev artifact
