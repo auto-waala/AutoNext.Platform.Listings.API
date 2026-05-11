@@ -14,13 +14,29 @@ namespace AutoNext.Platform.Listings.API.Configurations
         {
             var mongoSettings = settings.Value ?? throw new ArgumentNullException(nameof(settings), "MongoDB settings are null");
 
-            if (string.IsNullOrEmpty(mongoSettings.ConnectionString))
-                throw new ArgumentNullException(nameof(mongoSettings.ConnectionString), "MongoDB connection string is not configured");
+            // PRIORITY: Environment Variable > appsettings.json
+            var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTIONSTRING")
+                                   ?? Environment.GetEnvironmentVariable("MongoDB__ConnectionString")
+                                   ?? Environment.GetEnvironmentVariable("ConnectionStrings__MongoDB")
+                                   ?? mongoSettings.ConnectionString;
+
+            if (string.IsNullOrEmpty(connectionString))
+                throw new ArgumentNullException(nameof(connectionString), "MongoDB connection string is not configured");
+
+            // Check for unreplaced placeholders
+            if (connectionString.Contains("__"))
+            {
+                throw new InvalidOperationException(
+                    $"Invalid MongoDB connection string. It still contains placeholders: {connectionString}. " +
+                    $"Environment: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Not set"}. " +
+                    "Please check your configuration injection in the deployment pipeline."
+                );
+            }
 
             if (string.IsNullOrEmpty(mongoSettings.DatabaseName))
                 throw new ArgumentNullException(nameof(mongoSettings.DatabaseName), "MongoDB database name is not configured");
 
-            var clientSettings = MongoClientSettings.FromConnectionString(mongoSettings.ConnectionString);
+            var clientSettings = MongoClientSettings.FromConnectionString(connectionString);
 
             // Configure connection pool
             clientSettings.MinConnectionPoolSize = mongoSettings.MinConnectionPoolSize ?? 10;

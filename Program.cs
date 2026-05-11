@@ -17,6 +17,23 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ==================== CONFIGURATION DEBUGGING ====================
+Console.WriteLine("================================================");
+Console.WriteLine("AutoNext Platform Listings API - Starting");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"Current Directory: {Environment.CurrentDirectory}");
+Console.WriteLine("================================================");
+
+// Debug configuration sources
+var mongoDbConnectionString = builder.Configuration.GetSection("MongoDB:ConnectionString").Value;
+var connectionStringsMongo = builder.Configuration.GetConnectionString("MongoDB");
+var envVar = Environment.GetEnvironmentVariable("MongoDB__ConnectionString");
+
+Console.WriteLine($"Config Source - MongoDB:ConnectionString: {(string.IsNullOrEmpty(mongoDbConnectionString) ? "NULL" : mongoDbConnectionString.Contains("__") ? "Has Placeholder!" : "Valid (value hidden)")}");
+Console.WriteLine($"Config Source - ConnectionStrings:MongoDB: {(string.IsNullOrEmpty(connectionStringsMongo) ? "NULL" : connectionStringsMongo.Contains("__") ? "Has Placeholder!" : "Valid (value hidden)")}");
+Console.WriteLine($"Environment Variable - MongoDB__ConnectionString: {(string.IsNullOrEmpty(envVar) ? "NOT SET" : "SET (value hidden)")}");
+Console.WriteLine("================================================");
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -252,35 +269,17 @@ builder.Services.Configure<FormOptions>(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+app.UseDeveloperExceptionPage();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1");
-        c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2");
-        c.RoutePrefix = "swagger";
-        c.DocumentTitle = "AutoNext Listings API Documentation";
-        c.DisplayRequestDuration();
-    });
-}
-else if (app.Environment.EnvironmentName == "Staging")
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1 (Staging)");
-        c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2 (Staging)");
-        c.RoutePrefix = "swagger";
-    });
-}
-else
-{
-    app.UseHsts();
-}
-
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1");
+    c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "AutoNext Listings API Documentation";
+    c.DisplayRequestDuration();
+});
+app.UseHsts();
 app.UseHttpsRedirection();
 app.UseResponseCaching();
 app.UseCors("AllowSpecificOrigins");
