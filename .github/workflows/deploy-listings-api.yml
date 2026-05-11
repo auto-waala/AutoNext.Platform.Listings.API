@@ -57,31 +57,74 @@ jobs:
           "@
           Set-Content -Path ./publish/prod/deployment-info.txt -Value $info
 
-      # ==================== INJECT DEV SECRETS INTO ALL CONFIG FILES ====================
-      - name: Inject Dev secrets into all config files
+      # ==================== CLEAN DEV PUBLISH FOLDER ====================
+      - name: Remove Production config files from Dev package
+        shell: pwsh
+        run: |
+          # Remove any Production-specific files from Dev package
+          $prodFiles = @(
+            "./publish/dev/appsettings.Production.json",
+            "./publish/dev/appsettings.Production.json"
+          )
+          
+          foreach ($file in $prodFiles) {
+            if (Test-Path $file) {
+              Remove-Item $file -Force
+              Write-Host "Removed $file from Dev package"
+            }
+          }
+
+      # ==================== CLEAN PROD PUBLISH FOLDER ====================
+      - name: Remove Development config files from Prod package
+        shell: pwsh
+        run: |
+          # Remove any Development-specific files from Prod package
+          $devFiles = @(
+            "./publish/prod/appsettings.Development.json",
+            "./publish/prod/appsettings.Development.json"
+          )
+          
+          foreach ($file in $devFiles) {
+            if (Test-Path $file) {
+              Remove-Item $file -Force
+              Write-Host "Removed $file from Prod package"
+            }
+          }
+
+      # ==================== INJECT DEV SECRETS ====================
+      - name: Inject Dev secrets into Dev config files
         shell: pwsh
         env:
           MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
           JWT_DEV_KEY: ${{ secrets.JWT_DEV_KEY }}
         run: |
-          # Get all JSON files in the dev publish directory
-          $configFiles = Get-ChildItem -Path ./publish/dev -Filter "*.json" -Recurse
+          # Only process Dev-specific JSON files
+          $configFiles = @(
+            "./publish/dev/appsettings.json",
+            "./publish/dev/appsettings.Development.json"
+          )
           
           foreach ($file in $configFiles) {
-            Write-Host "Processing DEV: $($file.Name)"
-            $content = Get-Content $file.FullName -Raw
-            
-            # Replace all placeholders
-            $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
-            $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
-            $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
-            $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_DEV_KEY
-            
-            Set-Content -Path $file.FullName -Value $content -NoNewline
+            if (Test-Path $file) {
+              Write-Host "Processing DEV: $file"
+              $content = Get-Content $file -Raw
+              
+              # Replace Dev placeholders only
+              $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+              $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
+              
+              # Also handle any Prod placeholders that might have leaked (replace with Dev values)
+              $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+              $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', "redis://localhost:6379"
+              $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_DEV_KEY
+              $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', ""
+              
+              Set-Content -Path $file -Value $content -NoNewline
+            }
           }
 
-      # ==================== INJECT PROD SECRETS INTO ALL CONFIG FILES ====================
-      - name: Inject Prod secrets into all config files
+      # ==================== INJECT PROD SECRETS ====================
+      - name: Inject Prod secrets into Prod config files
         shell: pwsh
         env:
           MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
@@ -89,49 +132,74 @@ jobs:
           JWT_PROD_KEY: ${{ secrets.JWT_PROD_KEY }}
           APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
         run: |
-          # Get all JSON files in the prod publish directory
-          $configFiles = Get-ChildItem -Path ./publish/prod -Filter "*.json" -Recurse
+          # Only process Prod-specific JSON files
+          $configFiles = @(
+            "./publish/prod/appsettings.json",
+            "./publish/prod/appsettings.Production.json"
+          )
           
           foreach ($file in $configFiles) {
-            Write-Host "Processing PROD: $($file.Name)"
-            $content = Get-Content $file.FullName -Raw
-            
-            # Replace all placeholders
-            $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
-            $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
-            $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
-            $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_PROD_KEY
-            $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_PROD_KEY
-            $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
-            
-            Set-Content -Path $file.FullName -Value $content -NoNewline
+            if (Test-Path $file) {
+              Write-Host "Processing PROD: $file"
+              $content = Get-Content $file -Raw
+              
+              # Replace Prod placeholders
+              $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+              $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
+              $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_PROD_KEY
+              $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
+              
+              # Replace any Dev placeholders that might have leaked (shouldn't happen in Prod)
+              $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+              $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_PROD_KEY
+              
+              Set-Content -Path $file -Value $content -NoNewline
+            }
           }
 
       # ==================== VERIFY NO PLACEHOLDERS REMAIN ====================
-      - name: Verify no placeholders remain in Dev config
+      - name: Verify Dev config has no placeholders
         shell: pwsh
         run: |
-          $configFiles = Get-ChildItem -Path ./publish/dev -Filter "*.json" -Recurse
+          $configFiles = @(
+            "./publish/dev/appsettings.json",
+            "./publish/dev/appsettings.Development.json"
+          )
+          
           foreach ($file in $configFiles) {
-            $content = Get-Content $file.FullName -Raw
-            if ($content -match '__\w+__') {
-              Write-Error "❌ Dev file $($file.Name) still contains placeholder: $($Matches[0])"
-              exit 1
+            if (Test-Path $file) {
+              $content = Get-Content $file -Raw
+              # Check for any remaining placeholders (both Dev and Prod patterns)
+              if ($content -match '__\w+__') {
+                Write-Error "❌ Dev file $($file) still contains placeholder: $($Matches[0])"
+                Write-Host "File content snippet:"
+                Write-Host $content.Substring(0, [Math]::Min(500, $content.Length))
+                exit 1
+              }
+              Write-Host "✅ Dev file $($file) verified"
             }
-            Write-Host "✅ Dev file $($file.Name) verified"
           }
 
-      - name: Verify no placeholders remain in Prod config
+      - name: Verify Prod config has no placeholders
         shell: pwsh
         run: |
-          $configFiles = Get-ChildItem -Path ./publish/prod -Filter "*.json" -Recurse
+          $configFiles = @(
+            "./publish/prod/appsettings.json",
+            "./publish/prod/appsettings.Production.json"
+          )
+          
           foreach ($file in $configFiles) {
-            $content = Get-Content $file.FullName -Raw
-            if ($content -match '__\w+__') {
-              Write-Error "❌ Prod file $($file.Name) still contains placeholder: $($Matches[0])"
-              exit 1
+            if (Test-Path $file) {
+              $content = Get-Content $file -Raw
+              # Check for any remaining placeholders
+              if ($content -match '__\w+__') {
+                Write-Error "❌ Prod file $($file) still contains placeholder: $($Matches[0])"
+                Write-Host "File content snippet:"
+                Write-Host $content.Substring(0, [Math]::Min(500, $content.Length))
+                exit 1
+              }
+              Write-Host "✅ Prod file $($file) verified"
             }
-            Write-Host "✅ Prod file $($file.Name) verified"
           }
 
       - name: Upload Dev artifact
