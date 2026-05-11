@@ -1,19 +1,18 @@
-﻿
-namespace AutoNext.Platform.Listings.API.Models.Common
+﻿namespace AutoNext.Platform.Listings.API.Models.Common
 {
     public class ApiResponse<T>
     {
-        public bool Success { get; set; }
+        public bool IsSuccess { get; set; }
         public string Message { get; set; } = string.Empty;
         public int StatusCode { get; set; }
         public T? Data { get; set; }
         public List<string>? Errors { get; set; }
 
-        public static ApiResponse<T> Ok(T data, string message = "Success")
+        public static ApiResponse<T> Success(T data, string message = "Success")
         {
             return new ApiResponse<T>
             {
-                Success = true,
+                IsSuccess = true,
                 Message = message,
                 StatusCode = 200,
                 Data = data
@@ -24,7 +23,7 @@ namespace AutoNext.Platform.Listings.API.Models.Common
         {
             return new ApiResponse<T>
             {
-                Success = true,
+                IsSuccess = true,
                 Message = message,
                 StatusCode = 201,
                 Data = data
@@ -35,7 +34,7 @@ namespace AutoNext.Platform.Listings.API.Models.Common
         {
             return new ApiResponse<T>
             {
-                Success = false,
+                IsSuccess = false,
                 Message = message,
                 StatusCode = statusCode,
                 Errors = errors
@@ -46,7 +45,7 @@ namespace AutoNext.Platform.Listings.API.Models.Common
         {
             return new ApiResponse<T>
             {
-                Success = false,
+                IsSuccess = false,
                 Message = message,
                 StatusCode = 404
             };
