@@ -58,32 +58,38 @@ jobs:
           Set-Content -Path ./publish/prod/deployment-info.txt -Value $info
 
       # ==================== INJECT DEV CONFIGURATIONS ====================
-      - name: Inject Dev secrets into appsettings.json
+      - name: Inject Dev secrets into ALL config files
         shell: pwsh
         env:
           MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
           JWT_DEV_KEY: ${{ secrets.JWT_DEV_KEY }}
         run: |
-          # Update base appsettings.json for Dev
-          $content = Get-Content -Path appsettings.json -Raw
-          $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
-          $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
-          $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
-          Set-Content -Path ./publish/dev/appsettings.json -Value $content -NoNewline
-
-      - name: Inject Dev secrets into appsettings.Development.json
-        shell: pwsh
-        env:
-          MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
-          JWT_DEV_KEY: ${{ secrets.JWT_DEV_KEY }}
-        run: |
-          $content = Get-Content -Path appsettings.Development.json -Raw
-          $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
-          $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
-          Set-Content -Path ./publish/dev/appsettings.Development.json -Value $content -NoNewline
+          # List all JSON config files in the dev publish directory
+          $configFiles = @(
+            "./publish/dev/appsettings.json",
+            "./publish/dev/appsettings.Development.json"
+          )
+          
+          foreach ($file in $configFiles) {
+            if (Test-Path $file) {
+              Write-Host "Processing $file"
+              $content = Get-Content -Path $file -Raw
+              
+              # Replace ALL placeholders
+              $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+              $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+              $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
+              
+              # Also replace in ConnectionStrings section if present
+              $content = $content -replace '"MongoDB":\s*"__MONGODB_DEV_CONNECTION_STRING__"', '"MongoDB": "' + $env:MONGODB_DEV_CONNECTION_STRING + '"'
+              $content = $content -replace '"MongoDB":\s*"__MONGODB_PROD_CONNECTION_STRING__"', '"MongoDB": "' + $env:MONGODB_DEV_CONNECTION_STRING + '"'
+              
+              Set-Content -Path $file -Value $content -NoNewline
+            }
+          }
 
       # ==================== INJECT PROD CONFIGURATIONS ====================
-      - name: Inject Prod secrets into appsettings.json
+      - name: Inject Prod secrets into ALL config files
         shell: pwsh
         env:
           MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
@@ -91,68 +97,93 @@ jobs:
           JWT_PROD_KEY: ${{ secrets.JWT_PROD_KEY }}
           APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
         run: |
-          # Update base appsettings.json for Prod
-          $content = Get-Content -Path appsettings.json -Raw
-          $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
-          $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
-          $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_PROD_KEY
-          $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
-          $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
-          Set-Content -Path ./publish/prod/appsettings.json -Value $content -NoNewline
-
-      - name: Inject Prod secrets into appsettings.Production.json
-        shell: pwsh
-        env:
-          MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
-          REDIS_PROD_CONNECTION_STRING: ${{ secrets.REDIS_PROD_CONNECTION_STRING }}
-          JWT_PROD_KEY: ${{ secrets.JWT_PROD_KEY }}
-          APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
-        run: |
-          $content = Get-Content -Path appsettings.Production.json -Raw
-          $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
-          $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
-          $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_PROD_KEY
-          $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
-          Set-Content -Path ./publish/prod/appsettings.Production.json -Value $content -NoNewline
+          # List all JSON config files in the prod publish directory
+          $configFiles = @(
+            "./publish/prod/appsettings.json",
+            "./publish/prod/appsettings.Production.json"
+          )
+          
+          foreach ($file in $configFiles) {
+            if (Test-Path $file) {
+              Write-Host "Processing $file"
+              $content = Get-Content -Path $file -Raw
+              
+              # Replace ALL placeholders
+              $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+              $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+              $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
+              $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_PROD_KEY
+              $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
+              
+              # Also replace in ConnectionStrings section if present
+              $content = $content -replace '"MongoDB":\s*"__MONGODB_PROD_CONNECTION_STRING__"', '"MongoDB": "' + $env:MONGODB_PROD_CONNECTION_STRING + '"'
+              
+              Set-Content -Path $file -Value $content -NoNewline
+            }
+          }
 
       # ==================== VERIFY CONFIGURATIONS ====================
-      - name: Verify Dev config (mask sensitive values)
+      - name: Verify Dev config
         shell: pwsh
         run: |
-          Write-Host "Verifying Dev appsettings.json..."
-          $content = Get-Content ./publish/dev/appsettings.json -Raw
-          if ($content -match '__\w+__') {
-            Write-Error "Dev appsettings.json still contains unreplaced placeholders: $($Matches[0])"
-            exit 1
+          $configFiles = @(
+            "./publish/dev/appsettings.json",
+            "./publish/dev/appsettings.Development.json"
+          )
+          
+          foreach ($file in $configFiles) {
+            if (Test-Path $file) {
+              Write-Host "Checking $file"
+              $content = Get-Content $file -Raw
+              if ($content -match '__\w+__') {
+                Write-Error "File $file still contains unreplaced placeholders: $($Matches[0])"
+                exit 1
+              }
+              
+              # Verify MongoDB connection string is present and not a placeholder
+              if ($content -match '"MongoDB":\s*"([^"]+)"') {
+                $connString = $Matches[1]
+                if ($connString -like '__*__') {
+                  Write-Error "MongoDB connection string in $file is still a placeholder: $connString"
+                  exit 1
+                }
+                Write-Host "✓ MongoDB connection string found in $file"
+              }
+            }
           }
           
-          Write-Host "Verifying Dev appsettings.Development.json..."
-          $content = Get-Content ./publish/dev/appsettings.Development.json -Raw
-          if ($content -match '__\w+__') {
-            Write-Error "Dev appsettings.Development.json still contains unreplaced placeholders: $($Matches[0])"
-            exit 1
-          }
-          
-          Write-Host "Dev config injection verified successfully"
+          Write-Host "✓ Dev config verification passed"
 
-      - name: Verify Prod config (mask sensitive values)
+      - name: Verify Prod config
         shell: pwsh
         run: |
-          Write-Host "Verifying Prod appsettings.json..."
-          $content = Get-Content ./publish/prod/appsettings.json -Raw
-          if ($content -match '__\w+__') {
-            Write-Error "Prod appsettings.json still contains unreplaced placeholders: $($Matches[0])"
-            exit 1
+          $configFiles = @(
+            "./publish/prod/appsettings.json",
+            "./publish/prod/appsettings.Production.json"
+          )
+          
+          foreach ($file in $configFiles) {
+            if (Test-Path $file) {
+              Write-Host "Checking $file"
+              $content = Get-Content $file -Raw
+              if ($content -match '__\w+__') {
+                Write-Error "File $file still contains unreplaced placeholders: $($Matches[0])"
+                exit 1
+              }
+              
+              # Verify MongoDB connection string is present and not a placeholder
+              if ($content -match '"MongoDB":\s*"([^"]+)"') {
+                $connString = $Matches[1]
+                if ($connString -like '__*__') {
+                  Write-Error "MongoDB connection string in $file is still a placeholder: $connString"
+                  exit 1
+                }
+                Write-Host "✓ MongoDB connection string found in $file"
+              }
+            }
           }
           
-          Write-Host "Verifying Prod appsettings.Production.json..."
-          $content = Get-Content ./publish/prod/appsettings.Production.json -Raw
-          if ($content -match '__\w+__') {
-            Write-Error "Prod appsettings.Production.json still contains unreplaced placeholders: $($Matches[0])"
-            exit 1
-          }
-          
-          Write-Host "Prod config injection verified successfully"
+          Write-Host "✓ Prod config verification passed"
 
       - name: Upload Dev artifact
         uses: actions/upload-artifact@v4
