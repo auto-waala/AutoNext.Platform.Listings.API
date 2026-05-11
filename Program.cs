@@ -121,9 +121,11 @@ builder.Services.AddSingleton<MongoDbContext>();
 
 // Register Unit of Work and Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<INewlyArrivedRepository, NewlyArrivedRepository>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 
 // Register Services
+builder.Services.AddScoped<INewlyArrivedService, NewlyArrivedService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 
 // Configure JWT Authentication

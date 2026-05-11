@@ -1,7 +1,6 @@
 ﻿using AutoNext.Platform.Listings.API.Models.Common;
 using AutoNext.Platform.Listings.API.Models.DTOs;
 using AutoNext.Platform.Listings.API.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoNext.Platform.Listings.API.Controllers.v1
@@ -30,7 +29,7 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             pageSize = Math.Min(pageSize, 50);
 
             var result = await _vehicleService.GetAllAsync(page, pageSize);
-            return Ok(ApiResponse<PagedResult<VehicleDto>>.Ok(result, "Vehicles retrieved successfully"));
+            return Ok(ApiResponse<PagedResult<VehicleDto>>.Success(result, "Vehicles retrieved successfully"));
         }
 
         [HttpGet("{id}")]
@@ -43,7 +42,7 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             if (vehicle == null)
                 return NotFound(ApiResponse<VehicleDto>.NotFound("Vehicle not found"));
 
-            return Ok(ApiResponse<VehicleDto>.Ok(vehicle, "Vehicle retrieved successfully"));
+            return Ok(ApiResponse<VehicleDto>.Success(vehicle, "Vehicle retrieved successfully"));
         }
 
         [HttpGet("search")]
@@ -54,7 +53,7 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
 
             var vehicles = await _vehicleService.SearchAsync(request);
 
-            return Ok(ApiResponse<PagedResult<VehicleDto>>.Ok(vehicles, "Search completed successfully"));
+            return Ok(ApiResponse<PagedResult<VehicleDto>>.Success(vehicles, "Search completed successfully"));
         }
 
         [HttpPost]
@@ -83,7 +82,7 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             if (vehicle == null)
                 return NotFound(ApiResponse<VehicleDto>.NotFound("Vehicle not found"));
 
-            return Ok(ApiResponse<VehicleDto>.Ok(vehicle, "Vehicle updated successfully"));
+            return Ok(ApiResponse<VehicleDto>.Success(vehicle, "Vehicle updated successfully"));
         }
 
         [HttpDelete("{id}")]
@@ -96,7 +95,7 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             if (!result)
                 return NotFound(ApiResponse<object>.NotFound("Vehicle not found"));
 
-            return Ok(ApiResponse<object>.Ok(null, "Vehicle deleted successfully"));
+            return Ok(ApiResponse<object>.Success(null, "Vehicle deleted successfully"));
         }
     }
 }

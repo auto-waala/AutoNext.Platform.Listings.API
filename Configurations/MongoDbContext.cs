@@ -36,6 +36,7 @@ namespace AutoNext.Platform.Listings.API.Configurations
         }
 
         public IMongoCollection<Vehicle> Vehicles => _database.GetCollection<Vehicle>("vehicles");
+        public IMongoCollection<NewlyArrivedVehicle> NewlyArrivedVehicles => _database.GetCollection<NewlyArrivedVehicle>("newly_arrived_vehicles");
 
         public IMongoCollection<T> GetCollection<T>(string collectionName) => _database.GetCollection<T>(collectionName);
 
