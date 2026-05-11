@@ -30,52 +30,109 @@ jobs:
         run: dotnet publish AutoNext.Platform.Listings.API.csproj --configuration Release --output ./publish/prod -p:EnvironmentName=Production
 
       - name: Copy web.config to Dev package
-        shell: bash
-        run: cp web.config ./publish/dev/web.config
+        shell: pwsh
+        run: Copy-Item web.config ./publish/dev/web.config -Force
 
       - name: Copy web.config to Prod package
-        shell: bash
-        run: cp web.config ./publish/prod/web.config
+        shell: pwsh
+        run: Copy-Item web.config ./publish/prod/web.config -Force
 
       - name: Prepare Dev deployment package
-        shell: bash
+        shell: pwsh
         run: |
-          echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/dev/deployment-info.txt
-          echo "Commit SHA: ${{ github.sha }}" >> ./publish/dev/deployment-info.txt
-          echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/dev/deployment-info.txt
+          $info = @"
+          Deployed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC' -AsUTC)
+          Commit SHA: ${{ github.sha }}
+          PR Number: #${{ github.event.pull_request.number }}
+          "@
+          Set-Content -Path ./publish/dev/deployment-info.txt -Value $info
 
       - name: Prepare Prod deployment package
-        shell: bash
+        shell: pwsh
         run: |
-          echo "Deployed: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > ./publish/prod/deployment-info.txt
-          echo "Commit SHA: ${{ github.sha }}" >> ./publish/prod/deployment-info.txt
-          echo "PR Number: #${{ github.event.pull_request.number }}" >> ./publish/prod/deployment-info.txt
+          $info = @"
+          Deployed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC' -AsUTC)
+          Commit SHA: ${{ github.sha }}
+          PR Number: #${{ github.event.pull_request.number }}
+          "@
+          Set-Content -Path ./publish/prod/deployment-info.txt -Value $info
 
-      - name: Inject Dev secrets into config
-        shell: bash
+      # ==================== INJECT DEV SECRETS INTO ALL CONFIG FILES ====================
+      - name: Inject Dev secrets into all config files
+        shell: pwsh
         env:
           MONGODB_DEV_CONNECTION_STRING: ${{ secrets.MONGODB_DEV_CONNECTION_STRING }}
           JWT_DEV_KEY: ${{ secrets.JWT_DEV_KEY }}
         run: |
-          sed \
-            -e "s|__MONGODB_DEV_CONNECTION_STRING__|${MONGODB_DEV_CONNECTION_STRING}|g" \
-            -e "s|__JWT_DEV_KEY__|${JWT_DEV_KEY}|g" \
-            appsettings.Development.json > ./publish/dev/appsettings.Development.json
+          # Get all JSON files in the dev publish directory
+          $configFiles = Get-ChildItem -Path ./publish/dev -Filter "*.json" -Recurse
+          
+          foreach ($file in $configFiles) {
+            Write-Host "Processing DEV: $($file.Name)"
+            $content = Get-Content $file.FullName -Raw
+            
+            # Replace all placeholders
+            $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+            $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_DEV_CONNECTION_STRING
+            $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_DEV_KEY
+            $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_DEV_KEY
+            
+            Set-Content -Path $file.FullName -Value $content -NoNewline
+          }
 
-      - name: Inject Prod secrets into config
-        shell: bash
+      # ==================== INJECT PROD SECRETS INTO ALL CONFIG FILES ====================
+      - name: Inject Prod secrets into all config files
+        shell: pwsh
         env:
           MONGODB_PROD_CONNECTION_STRING: ${{ secrets.MONGODB_PROD_CONNECTION_STRING }}
           REDIS_PROD_CONNECTION_STRING: ${{ secrets.REDIS_PROD_CONNECTION_STRING }}
           JWT_PROD_KEY: ${{ secrets.JWT_PROD_KEY }}
           APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
         run: |
-          sed \
-            -e "s|__MONGODB_PROD_CONNECTION_STRING__|${MONGODB_PROD_CONNECTION_STRING}|g" \
-            -e "s|__REDIS_PROD_CONNECTION_STRING__|${REDIS_PROD_CONNECTION_STRING}|g" \
-            -e "s|__JWT_PROD_KEY__|${JWT_PROD_KEY}|g" \
-            -e "s|__APPINSIGHTS_CONNECTION_STRING__|${APPINSIGHTS_CONNECTION_STRING}|g" \
-            appsettings.Production.json > ./publish/prod/appsettings.Production.json
+          # Get all JSON files in the prod publish directory
+          $configFiles = Get-ChildItem -Path ./publish/prod -Filter "*.json" -Recurse
+          
+          foreach ($file in $configFiles) {
+            Write-Host "Processing PROD: $($file.Name)"
+            $content = Get-Content $file.FullName -Raw
+            
+            # Replace all placeholders
+            $content = $content -replace '__MONGODB_PROD_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+            $content = $content -replace '__MONGODB_DEV_CONNECTION_STRING__', $env:MONGODB_PROD_CONNECTION_STRING
+            $content = $content -replace '__REDIS_PROD_CONNECTION_STRING__', $env:REDIS_PROD_CONNECTION_STRING
+            $content = $content -replace '__JWT_PROD_KEY__', $env:JWT_PROD_KEY
+            $content = $content -replace '__JWT_DEV_KEY__', $env:JWT_PROD_KEY
+            $content = $content -replace '__APPINSIGHTS_CONNECTION_STRING__', $env:APPINSIGHTS_CONNECTION_STRING
+            
+            Set-Content -Path $file.FullName -Value $content -NoNewline
+          }
+
+      # ==================== VERIFY NO PLACEHOLDERS REMAIN ====================
+      - name: Verify no placeholders remain in Dev config
+        shell: pwsh
+        run: |
+          $configFiles = Get-ChildItem -Path ./publish/dev -Filter "*.json" -Recurse
+          foreach ($file in $configFiles) {
+            $content = Get-Content $file.FullName -Raw
+            if ($content -match '__\w+__') {
+              Write-Error "❌ Dev file $($file.Name) still contains placeholder: $($Matches[0])"
+              exit 1
+            }
+            Write-Host "✅ Dev file $($file.Name) verified"
+          }
+
+      - name: Verify no placeholders remain in Prod config
+        shell: pwsh
+        run: |
+          $configFiles = Get-ChildItem -Path ./publish/prod -Filter "*.json" -Recurse
+          foreach ($file in $configFiles) {
+            $content = Get-Content $file.FullName -Raw
+            if ($content -match '__\w+__') {
+              Write-Error "❌ Prod file $($file.Name) still contains placeholder: $($Matches[0])"
+              exit 1
+            }
+            Write-Host "✅ Prod file $($file.Name) verified"
+          }
 
       - name: Upload Dev artifact
         uses: actions/upload-artifact@v4
