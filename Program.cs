@@ -74,8 +74,10 @@ builder.Services.AddVersionedApiExplorer(options =>
     options.SubstituteApiVersionInUrl = true;
 });
 
-// Configure Swagger/OpenAPI with versioning support
-if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Staging")
+// Configure Swagger/OpenAPI with versioning support - ONLY FOR DEVELOPMENT/STAGING
+var isSwaggerEnabled = builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Staging";
+
+if (isSwaggerEnabled)
 {
     builder.Services.AddSwaggerGen(c =>
     {
@@ -269,18 +271,29 @@ builder.Services.Configure<FormOptions>(options =>
 
 var app = builder.Build();
 
-app.UseDeveloperExceptionPage();
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// Configure the HTTP request pipeline
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1");
-    c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2");
-    c.RoutePrefix = "swagger";
-    c.DocumentTitle = "AutoNext Listings API Documentation";
-    c.DisplayRequestDuration();
-});
+    app.UseDeveloperExceptionPage();
+}
+
 app.UseHsts();
 app.UseHttpsRedirection();
+
+// Only enable Swagger in Development/Staging environments
+if (isSwaggerEnabled)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1");
+        c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2");
+        c.RoutePrefix = "swagger";
+        c.DocumentTitle = "AutoNext Listings API Documentation";
+        c.DisplayRequestDuration();
+    });
+}
+
 app.UseResponseCaching();
 app.UseCors("AllowSpecificOrigins");
 app.UseRateLimiter();
