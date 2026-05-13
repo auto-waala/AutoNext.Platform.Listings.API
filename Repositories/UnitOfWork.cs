@@ -9,10 +9,14 @@ namespace AutoNext.Platform.Listings.API.Repositories
         private bool _disposed;
 
         public IVehicleRepository Vehicles { get; }
+        public INewlyArrivedRepository NewlyArrivedVehicles { get; }
+        public IFeaturedVehicleRepository FeaturedVehicles { get; }
 
         public UnitOfWork(MongoDbContext context)
         {
             Vehicles = new VehicleRepository(context);
+            NewlyArrivedVehicles = new NewlyArrivedRepository(context);
+            FeaturedVehicles = new FeaturedVehicleRepository(context);
         }
 
         public async Task<int> SaveChangesAsync()

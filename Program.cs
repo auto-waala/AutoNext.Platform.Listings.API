@@ -141,10 +141,12 @@ builder.Services.AddSingleton<MongoDbContext>();
 // Register Unit of Work and Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<INewlyArrivedRepository, NewlyArrivedRepository>();
+builder.Services.AddScoped<IFeaturedVehicleRepository, FeaturedVehicleRepository>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 
 // Register Services
 builder.Services.AddScoped<INewlyArrivedService, NewlyArrivedService>();
+builder.Services.AddScoped<IFeaturedVehicleService, FeaturedVehicleService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 
 // Configure JWT Authentication
@@ -388,6 +390,13 @@ finally
 // Helper methods
 async Task EnsureIndexes(MongoDbContext db, ILogger<Program> logger)
 {
+    await Task.WhenAll(EnsureVehicleIndexes(db, logger), EnsureFeaturedVehicleIndexes(db, logger));
+
+    logger.LogInformation("All database indexes created successfully");
+}
+
+async Task EnsureVehicleIndexes(MongoDbContext db, ILogger<Program> logger)
+{
     try
     {
         var vehiclesCollection = db.Vehicles;
@@ -433,13 +442,95 @@ async Task EnsureIndexes(MongoDbContext db, ILogger<Program> logger)
         };
 
         await vehiclesCollection.Indexes.CreateManyAsync(indexes);
-        logger.LogInformation("Database indexes created successfully");
+        logger.LogInformation("Vehicle indexes created successfully");
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "Error creating indexes - they may already exist");
+        logger.LogWarning(ex, "Error creating Vehicle indexes - they may already exist");
     }
 }
+
+async Task EnsureFeaturedVehicleIndexes(MongoDbContext db, ILogger<Program> logger)
+{
+    try
+    {
+        var featuredVehiclesCollection = db.FeaturedVehicles;
+
+        // Critical indexes (must have)
+        var criticalIndexes = new[]
+        {
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Ascending(v => v.Slug),
+                new CreateIndexOptions { Unique = true, Name = "idx_fv_slug" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Ascending(v => v.ModelSlug),
+                new CreateIndexOptions { Unique = true, Name = "idx_fv_model_slug" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys
+                    .Ascending(v => v.IsActive)
+                    .Ascending(v => v.StartDate)
+                    .Ascending(v => v.EndDate),
+                new CreateIndexOptions { Name = "idx_fv_active_dates" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys
+                    .Ascending(v => v.IsActive)
+                    .Ascending(v => v.Priority)
+                    .Descending(v => v.Rating),
+                new CreateIndexOptions { Name = "idx_fv_active_priority_rating" })
+        };
+
+        await featuredVehiclesCollection.Indexes.CreateManyAsync(criticalIndexes);
+        logger.LogInformation("FeaturedVehicle critical indexes created successfully");
+
+        // Optional indexes (can be created in background)
+        var optionalIndexes = new[]
+        {
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Ascending(v => v.BrandName),
+                new CreateIndexOptions { Name = "idx_fv_brand_name" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Ascending(v => v.VehicleType),
+                new CreateIndexOptions { Name = "idx_fv_vehicle_type" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Ascending("Price.Amount"),
+                new CreateIndexOptions { Name = "idx_fv_price_amount" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Ascending("Location.City"),
+                new CreateIndexOptions { Name = "idx_fv_location_city" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys
+                    .Text(v => v.Title)
+                    .Text(v => v.Descriptions)
+                    .Text(v => v.BrandName)
+                    .Text(v => v.ModelName),
+                new CreateIndexOptions { Name = "idx_fv_search_text" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Descending(v => v.CreatedAt),
+                new CreateIndexOptions { Name = "idx_fv_created_at" }),
+
+            new CreateIndexModel<FeaturedVehicle>(
+                Builders<FeaturedVehicle>.IndexKeys.Descending("Engagement.Views"),
+                new CreateIndexOptions { Name = "idx_fv_engagement_views" })
+        };
+
+        await featuredVehiclesCollection.Indexes.CreateManyAsync(optionalIndexes);
+        logger.LogInformation("FeaturedVehicle optional indexes created successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Error creating FeaturedVehicle indexes - they may already exist");
+    }
+}
+
+
 
 async Task SeedSampleData(MongoDbContext db, ILogger<Program> logger)
 {
