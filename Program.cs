@@ -138,11 +138,13 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<INewlyArrivedRepository, NewlyArrivedRepository>();
 builder.Services.AddScoped<IFeaturedVehicleRepository, FeaturedVehicleRepository>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IUsedVehiclesRepository, UsedVehiclesRepository>();
 
 // Register Services
 builder.Services.AddScoped<INewlyArrivedService, NewlyArrivedService>();
 builder.Services.AddScoped<IFeaturedVehicleService, FeaturedVehicleService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IUsedVehiclesService, UsedVehiclesService>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication("Bearer")
@@ -408,7 +410,7 @@ async Task EnsureVehicleIndexes(MongoDbContext db, ILogger<Program> logger)
                 new CreateIndexOptions { Unique = true, Name = "idx_engine", Sparse = true }),
 
             new CreateIndexModel<Vehicle>(
-                Builders<Vehicle>.IndexKeys.Ascending(v => v.Seller.UserId),
+                Builders<Vehicle>.IndexKeys.Ascending(v => v.Seller.SellerId),
                 new CreateIndexOptions { Name = "idx_seller" }),
 
             new CreateIndexModel<Vehicle>(

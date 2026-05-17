@@ -50,7 +50,7 @@ namespace AutoNext.Platform.Listings.API.Repositories
         public async Task<IEnumerable<Vehicle>> GetBySellerAsync(string sellerId, int page, int pageSize)
         {
             return await _collection
-                .Find(v => v.Seller.UserId == sellerId && v.IsActive)
+                .Find(v => v.Seller.SellerId == sellerId && v.IsActive)
                 .SortByDescending(v => v.CreatedOn)
                 .Skip((page - 1) * pageSize)
                 .Limit(pageSize)
@@ -73,7 +73,7 @@ namespace AutoNext.Platform.Listings.API.Repositories
         public async Task<long> GetSellerCountAsync(string sellerId)
         {
             return await _collection
-                .CountDocumentsAsync(v => v.Seller.UserId == sellerId && v.IsActive);
+                .CountDocumentsAsync(v => v.Seller.SellerId == sellerId && v.IsActive);
         }
 
         // ── Commands ──────────────────────────────────────────────────────────

@@ -192,6 +192,8 @@ namespace AutoNext.Platform.Listings.API.Models.DTOs
         public int KMDriven { get; set; }
         public bool Accidental { get; set; }
         public bool ServiceHistoryAvailable { get; set; }
+        public int RegistrationYear { get; set; }
+        public int RegistrationMonth { get; set; }
         public string ConditionStatus => IsNew ? "New" : $"{OwnerCount} Owner(s)";
     }
 

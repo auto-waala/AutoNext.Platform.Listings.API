@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace AutoNext.Platform.Listings.API.Models.Entities
 {
-    public class FeaturedVehicle
+    public class UsedVehicles
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
@@ -120,18 +120,11 @@ namespace AutoNext.Platform.Listings.API.Models.Entities
         [BsonElement("share_urls")]
         public ShareUrls ShareUrls { get; set; } = new();
 
-        // Display Features (for featured vehicle)
-        [BsonElement("badges")]
-        public List<string> Badges { get; set; } = new();
-
-        [BsonElement("highlight")]
-        public string? Highlight { get; set; }
-
         // Test Drive
         [BsonElement("test_drive")]
         public TestDriveInfo TestDrive { get; set; } = new();
 
-        // Sorting & Visibility (Featured specific)
+        // Sorting & Visibility
         [BsonElement("priority")]
         public int Priority { get; set; } = 1;
 
@@ -162,41 +155,4 @@ namespace AutoNext.Platform.Listings.API.Models.Entities
         }
     }
 
-    // Nested Classes
-
-    public class PriceInfo
-    {
-        [BsonElement("amount")]
-        public decimal Amount { get; set; }
-
-        [BsonElement("currency")]
-        public string Currency { get; set; } = "INR";
-
-        [BsonElement("negotiable")]
-        public bool Negotiable { get; set; } = true;
-
-        [BsonElement("on_road_price")]
-        public decimal OnRoadPrice { get; set; }
-    }
-
-    public class VehicleImage
-    {
-        [BsonElement("file_id")]
-        public string FileId { get; set; } = string.Empty;
-
-        [BsonElement("file_url")]
-        public string FileUrl { get; set; } = string.Empty;
-
-        [BsonElement("is_primary")]
-        public bool IsPrimary { get; set; } = false;
-    }
-
-    public class VehicleMedia
-    {
-        [BsonElement("file_id")]
-        public string FileId { get; set; } = string.Empty;
-
-        [BsonElement("file_url")]
-        public string FileUrl { get; set; } = string.Empty;
-    }
 }

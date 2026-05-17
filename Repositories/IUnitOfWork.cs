@@ -5,6 +5,7 @@
         IVehicleRepository Vehicles { get; }
         IFeaturedVehicleRepository FeaturedVehicles { get; }
         INewlyArrivedRepository NewlyArrivedVehicles { get; }
+        IUsedVehiclesRepository UsedVehicles { get; }
         Task<int> SaveChangesAsync();
     }
 }

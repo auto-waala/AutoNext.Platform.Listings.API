@@ -11,18 +11,18 @@ namespace AutoNext.Platform.Listings.API.Repositories
         public IVehicleRepository Vehicles { get; }
         public INewlyArrivedRepository NewlyArrivedVehicles { get; }
         public IFeaturedVehicleRepository FeaturedVehicles { get; }
+        public IUsedVehiclesRepository UsedVehicles { get; }
 
         public UnitOfWork(MongoDbContext context)
         {
             Vehicles = new VehicleRepository(context);
             NewlyArrivedVehicles = new NewlyArrivedRepository(context);
             FeaturedVehicles = new FeaturedVehicleRepository(context);
+            UsedVehicles = new UsedVehiclesRepository(context);
         }
 
         public async Task<int> SaveChangesAsync()
         {
-            // For MongoDB, changes are auto-saved
-            // This is here for consistency with EF Core pattern
             return await Task.FromResult(1);
         }
 
