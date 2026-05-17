@@ -3,6 +3,7 @@ using AutoNext.Platform.Listings.API.Models.DTOs;
 using AutoNext.Platform.Listings.API.Models.Entities;
 using AutoNext.Platform.Listings.API.Models.Mappers;
 using AutoNext.Platform.Listings.API.Repositories;
+using MongoDB.Driver.Core.Servers;
 using System.Text.RegularExpressions;
 
 namespace AutoNext.Platform.Listings.API.Services
@@ -519,6 +520,12 @@ namespace AutoNext.Platform.Listings.API.Services
             slug = slug.Trim('-');
 
             return slug;
+        }
+
+        public async Task<IEnumerable<UsedVehiclesResponseDto>> GetBySellerAsync(string sellerId, int limit = 20)
+        {
+            var vehicles = await _repository.GetBySellerAsync(sellerId, limit);
+            return vehicles.ToResponseDtoList();
         }
     }
 }

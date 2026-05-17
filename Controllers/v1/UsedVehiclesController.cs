@@ -218,6 +218,17 @@ namespace AutoNext.Platform.Listings.API.Controllers.v1
             return Ok(ApiResponse<IEnumerable<UsedVehiclesResponseDto>>.Success(vehicles));
         }
 
+        [HttpGet("seller/{sellerId}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<UsedVehiclesResponseDto>>>> GetBySeller(string sellerId,
+           [FromQuery] int limit = 20)
+        {
+            _logger.LogInformation("Getting used vehicles by seller: {SellerId}, Limit: {Limit}", sellerId, limit);
+
+            var vehicles = await _service.GetBySellerAsync(sellerId, limit);
+
+            return Ok(ApiResponse<IEnumerable<UsedVehiclesResponseDto>>.Success(vehicles));
+        }
+
         [HttpGet("search")]
         public async Task<ActionResult<ApiResponse<IEnumerable<UsedVehiclesResponseDto>>>> Search(
             [FromQuery] string q,
