@@ -74,65 +74,60 @@ builder.Services.AddVersionedApiExplorer(options =>
     options.SubstituteApiVersionInUrl = true;
 });
 
-// Configure Swagger/OpenAPI with versioning support - ONLY FOR DEVELOPMENT/STAGING
-var isSwaggerEnabled = builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Staging";
-
-if (isSwaggerEnabled)
+// Configure Swagger/OpenAPI - Enabled for ALL environments
+builder.Services.AddSwaggerGen(c =>
 {
-    builder.Services.AddSwaggerGen(c =>
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
-        c.SwaggerDoc("v1", new OpenApiInfo
+        Title = "AutoNext Platform Listings API v1",
+        Version = "v1",
+        Description = "Vehicle listings management API for AutoNext platform - Version 1",
+        Contact = new OpenApiContact
         {
-            Title = "AutoNext Platform Listings API v1",
-            Version = "v1",
-            Description = "Vehicle listings management API for AutoNext platform - Version 1",
-            Contact = new OpenApiContact
-            {
-                Name = "AutoNext Support",
-                Email = "support@autonext.com",
-                Url = new Uri("https://autonext.com/support")
-            }
-        });
-
-        c.SwaggerDoc("v2", new OpenApiInfo
-        {
-            Title = "AutoNext Platform Listings API v2",
-            Version = "v2",
-            Description = "Vehicle listings management API for AutoNext platform - Version 2 (Enhanced)",
-            Contact = new OpenApiContact
-            {
-                Name = "AutoNext Support",
-                Email = "support@autonext.com",
-                Url = new Uri("https://autonext.com/support")
-            }
-        });
-
-        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-        {
-            Name = "Authorization",
-            Type = SecuritySchemeType.ApiKey,
-            Scheme = "Bearer",
-            BearerFormat = "JWT",
-            In = ParameterLocation.Header,
-            Description = "Enter 'Bearer' followed by your JWT token"
-        });
-
-        c.AddSecurityRequirement(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
-                },
-                Array.Empty<string>()
-            }
-        });
+            Name = "AutoNext Support",
+            Email = "support@autonext.com",
+            Url = new Uri("https://autonext.com/support")
+        }
     });
-}
+
+    c.SwaggerDoc("v2", new OpenApiInfo
+    {
+        Title = "AutoNext Platform Listings API v2",
+        Version = "v2",
+        Description = "Vehicle listings management API for AutoNext platform - Version 2 (Enhanced)",
+        Contact = new OpenApiContact
+        {
+            Name = "AutoNext Support",
+            Email = "support@autonext.com",
+            Url = new Uri("https://autonext.com/support")
+        }
+    });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer' followed by your JWT token"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Configure MongoDB
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDB"));
@@ -282,19 +277,16 @@ if (app.Environment.IsDevelopment())
 app.UseHsts();
 app.UseHttpsRedirection();
 
-// Only enable Swagger in Development/Staging environments
-if (isSwaggerEnabled)
+// Swagger enabled for ALL environments
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1");
-        c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2");
-        c.RoutePrefix = "swagger";
-        c.DocumentTitle = "AutoNext Listings API Documentation";
-        c.DisplayRequestDuration();
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AutoNext Platform Listings API v1");
+    c.SwaggerEndpoint("/swagger/v2/swagger.json", "AutoNext Platform Listings API v2");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "AutoNext Listings API Documentation";
+    c.DisplayRequestDuration();
+});
 
 app.UseResponseCaching();
 app.UseCors("AllowSpecificOrigins");
@@ -332,7 +324,7 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 // Print startup URLs
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     var urls = app.Urls.Any() ? string.Join(", ", app.Urls) : "https://localhost:5001;http://localhost:5000";
     Console.WriteLine("=".PadRight(80, '='));
