@@ -61,17 +61,13 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                 // ── Seller ──────────────────────────────────────────────────
                 Seller = vehicle.Seller is null ? null : new SellerInfoDto
                 {
-                    UserId = vehicle.Seller.UserId,
-                    Name = vehicle.Seller.Name,
-                    Phone = vehicle.Seller.Phone,
+                    UserId = vehicle.Seller.SellerId,
+                    Name = vehicle.Seller.SellerName,
+                    Phone = vehicle.Seller.ContactNumber,
                     Email = vehicle.Seller.Email,
                     SellerType = vehicle.Seller.SellerType,
-                    DealerId = vehicle.Seller.DealerId,
-                    StoreId = vehicle.Seller.StoreId,
-                    Location = vehicle.Seller.Location,
-                    ChatEnabled = vehicle.Seller.ChatEnabled,
-                    CallEnabled = vehicle.Seller.CallEnabled,
-                    IsVerified = vehicle.Seller.IsVerified
+                    DealerId = vehicle.Seller.DealerName,
+                    Location = vehicle.Seller.DealerAddress,
                 },
 
                 // ── Legacy flat seller fields (backward compat) ─────────────
