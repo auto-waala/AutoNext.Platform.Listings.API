@@ -24,6 +24,7 @@ namespace AutoNext.Platform.Listings.API.Repositories
         Task<IEnumerable<UsedVehicles>> GetByTransmissionAsync(string transmission, int limit = 20);
         Task<IEnumerable<UsedVehicles>> GetByYearRangeAsync(int minYear, int maxYear, int limit = 20);
         Task<IEnumerable<UsedVehicles>> GetBySellerTypeAsync(string sellerType, int limit = 20);
+        Task<IEnumerable<UsedVehicles>> GetBySellerAsync(string sellerId, int limit = 20);
 
         // Priority-based Queries
         Task<IEnumerable<UsedVehicles>> GetTopPriorityUsedVehiclesAsync(int limit = 10);

@@ -3,6 +3,7 @@ using AutoNext.Platform.Listings.API.Models.Common;
 using AutoNext.Platform.Listings.API.Models.Entities;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Servers;
 
 namespace AutoNext.Platform.Listings.API.Repositories
 {
@@ -658,6 +659,11 @@ namespace AutoNext.Platform.Listings.API.Repositories
 
                 await _collection.UpdateOneAsync(v => v.Id == id, update);
             }
+        }
+
+        public async Task<IEnumerable<UsedVehicles>> GetBySellerAsync(string sellerId, int limit = 20)
+        {
+            return await _collection.Find(v => v.Seller.SellerId.ToLower() == sellerId).SortByDescending(v => v.Priority).Limit(limit).ToListAsync();
         }
     }
 }
