@@ -143,11 +143,13 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<INewlyArrivedRepository, NewlyArrivedRepository>();
 builder.Services.AddScoped<IFeaturedVehicleRepository, FeaturedVehicleRepository>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IPremiumVehicleRepository,PremiumVehicleRepository>();
 
 // Register Services
 builder.Services.AddScoped<INewlyArrivedService, NewlyArrivedService>();
 builder.Services.AddScoped<IFeaturedVehicleService, FeaturedVehicleService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IPremiumVehicleService, PremiumVehicleService>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication("Bearer")

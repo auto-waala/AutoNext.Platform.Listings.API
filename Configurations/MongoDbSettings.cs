@@ -10,6 +10,8 @@
         public string OutboxCollectionName { get; set; } = "outbox_messages";
         public string EventStoreCollectionName { get; set; } = "event_store";
         public string NewlyArrivedCollectionName { get; set; } = "newly_arrived_vehicles";
+        public string FeaturedVehiclesCollectionName { get; set; } = "featured_vehicles";
+        public string PremiumVehiclesCollectionName { get; set; } = "premium_vehicles";
 
         // Connection Pool Settings
         public int? MinConnectionPoolSize { get; set; }
