@@ -12,6 +12,7 @@ namespace AutoNext.Platform.Listings.API.Repositories
         public INewlyArrivedRepository NewlyArrivedVehicles { get; }
         public IFeaturedVehicleRepository FeaturedVehicles { get; }
         public IUsedVehiclesRepository UsedVehicles { get; }
+        public IPremiumVehicleRepository PremiumVehicles { get; }
 
         public UnitOfWork(MongoDbContext context)
         {
@@ -19,6 +20,7 @@ namespace AutoNext.Platform.Listings.API.Repositories
             NewlyArrivedVehicles = new NewlyArrivedRepository(context);
             FeaturedVehicles = new FeaturedVehicleRepository(context);
             UsedVehicles = new UsedVehiclesRepository(context);
+            PremiumVehicles = new PremiumVehicleRepository(context);
         }
 
         public async Task<int> SaveChangesAsync()
