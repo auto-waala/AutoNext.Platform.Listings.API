@@ -114,8 +114,8 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
 
                 Seller = entity.Seller != null ? new SellerInfoDto
                 {
-                    UserId = entity.Seller.UserId,
-                    Name = entity.Seller.Name,
+                    UserId = entity.Seller.SellerId,
+                    Name = entity.Seller.SellerName,
                     Email = entity.Seller.Email
                 } : null!,
 
@@ -300,8 +300,8 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
 
                 Seller = request.Seller != null ? new SellerInfo
                 {
-                    UserId = request.Seller.UserId,
-                    Name = request.Seller.Name,
+                    SellerId = request.Seller.UserId,
+                    SellerName = request.Seller.Name,
                     Email = request.Seller.Email
                 } : null!,
 
@@ -423,8 +423,8 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
             entity.Rating = CalculateAverageRating(entity.UserRatings);
 
             if (entity.Seller == null) entity.Seller = new SellerInfo();
-            entity.Seller.UserId = request.Seller?.UserId ?? string.Empty;
-            entity.Seller.Name = request.Seller?.Name ?? string.Empty;
+            entity.Seller.SellerId = request.Seller?.UserId ?? string.Empty;
+            entity.Seller.SellerName = request.Seller?.Name ?? string.Empty;
             entity.Seller.Email = request.Seller?.Email ?? string.Empty;
 
             if (entity.Location == null) entity.Location = new LocationInfo();
