@@ -12,6 +12,7 @@
         public string NewlyArrivedCollectionName { get; set; } = "newly_arrived_vehicles";
         public string FeaturedVehiclesCollectionName { get; set; } = "featured_vehicles";
         public string PremiumVehiclesCollectionName { get; set; } = "premium_vehicles";
+        public string UsedVehiclesCollectionName { get; set; } = "used_vehicles";
 
         // Connection Pool Settings
         public int? MinConnectionPoolSize { get; set; }

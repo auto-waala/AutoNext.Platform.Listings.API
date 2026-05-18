@@ -1,17 +1,18 @@
 ﻿using AutoNext.Platform.Listings.API.Models.DTOs;
 using AutoNext.Platform.Listings.API.Models.Entities;
+using System.Text.RegularExpressions;
 
 namespace AutoNext.Platform.Listings.API.Models.Mappers
 {
-    public static class FeaturedVehicleMapper
+    public static class UsedVehiclesMapper
     {
         // ── Entity to Response DTO ─────────────────────────────────────────────
 
-        public static FeaturedVehicleResponseDto ToResponseDto(this FeaturedVehicle entity)
+        public static UsedVehiclesResponseDto ToResponseDto(this UsedVehicles entity)
         {
             if (entity == null) return null!;
 
-            return new FeaturedVehicleResponseDto
+            return new UsedVehiclesResponseDto
             {
                 Id = entity.Id,
                 Title = entity.Title,
@@ -31,26 +32,27 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     Negotiable = entity.Price.Negotiable,
                     OnRoadPrice = entity.Price.OnRoadPrice
                 } : null!,
-                PriceRange = GetPriceRange(entity.Price?.Amount, entity.PriceRangeFrom, entity.PriceRangeTo),
                 PriceRangeFrom = entity.PriceRangeFrom,
                 PriceRangeTo = entity.PriceRangeTo,
-                Images = entity.Images?.Select(i => new ImageDto
+                Images = entity.Images?.Select(i => new VehicleImageDto
                 {
                     FileId = i.FileId,
                     FileUrl = i.FileUrl,
                     IsPrimary = i.IsPrimary
-                }).ToList() ?? new List<ImageDto>(),
-                Videos = entity.Videos?.Select(v => new VideoDto
+                }).ToList() ?? new List<VehicleImageDto>(),
+                Videos = entity.Videos?.Select(v => new VehicleMediaDto
                 {
+                    FileId = v.FileId,
                     FileUrl = v.FileUrl
-                }).ToList() ?? new List<VideoDto>(),
-                Shorts = entity.Shorts?.Select(s => new VideoDto
+                }).ToList() ?? new List<VehicleMediaDto>(),
+                Shorts = entity.Shorts?.Select(s => new VehicleMediaDto
                 {
+                    FileId = s.FileId,
                     FileUrl = s.FileUrl
-                }).ToList() ?? new List<VideoDto>(),
-                ThumbnailImage = entity.Thumbnail,
+                }).ToList() ?? new List<VehicleMediaDto>(),
+                Thumbnail = entity.Thumbnail,
                 ThumbnailWebp = entity.ThumbnailWebp ?? string.Empty,
-                Variants = entity.Variants?.Select(v => new VariantDetailDto
+                Variants = entity.Variants?.Select(v => new VehicleVariantDto
                 {
                     Color = v.Color,
                     Engine = v.Engine,
@@ -58,7 +60,7 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     FuelType = v.FuelType,
                     Mileage = v.Mileage,
                     YearOfManufacture = v.YearOfManufacture
-                }).ToList() ?? new List<VariantDetailDto>(),
+                }).ToList() ?? new List<VehicleVariantDto>(),
                 KeySpecifications = entity.KeySpecifications != null ? new KeySpecificationsDto
                 {
                     Engine = entity.KeySpecifications.Engine,
@@ -90,7 +92,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     TagName = t.TagName
                 }).ToList() ?? new List<TagItemDto>(),
                 Rating = entity.Rating,
-                ReviewCount = entity.UserRatings?.Count ?? 0,
                 UserRatings = entity.UserRatings?.Select(ur => new UserRatingDto
                 {
                     UserId = ur.UserId,
@@ -98,7 +99,13 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     Comment = ur.Comment,
                     CreatedAt = ur.CreatedAt
                 }).ToList() ?? new List<UserRatingDto>(),
-                // FIXED: Map Seller correctly - handle both field name possibilities
+                Engagement = entity.Engagement != null ? new EngagementMetricsDto
+                {
+                    Views = entity.Engagement.Views,
+                    Likes = entity.Engagement.Likes,
+                    Shares = entity.Engagement.Shares,
+                    Enquiries = entity.Engagement.Enquiries
+                } : null!,
                 Seller = MapSellerInfo(entity.Seller),
                 Location = entity.Location != null ? new LocationInfoDto
                 {
@@ -114,7 +121,9 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     OwnerCount = entity.Condition.OwnerCount,
                     KMDriven = entity.Condition.KMDriven,
                     Accidental = entity.Condition.Accidental,
-                    ServiceHistoryAvailable = entity.Condition.ServiceHistoryAvailable
+                    ServiceHistoryAvailable = entity.Condition.ServiceHistoryAvailable,
+                    RegistrationYear = entity.Condition.RegistrationYear,
+                    RegistrationMonth = entity.Condition.RegistrationMonth
                 } : null!,
                 ListingDetails = entity.ListingDetails != null ? new ListingDetailsDto
                 {
@@ -127,13 +136,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     VerifiedBy = entity.ListingDetails.VerifiedBy,
                     VerificationDate = entity.ListingDetails.VerificationDate
                 } : null!,
-                Engagement = entity.Engagement != null ? new EngagementMetricsDto
-                {
-                    Views = entity.Engagement.Views,
-                    Likes = entity.Engagement.Likes,
-                    Shares = entity.Engagement.Shares,
-                    Enquiries = entity.Engagement.Enquiries
-                } : null!,
                 ShareUrls = entity.ShareUrls != null ? new ShareUrlsDto
                 {
                     Facebook = entity.ShareUrls.Facebook,
@@ -141,8 +143,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     WhatsApp = entity.ShareUrls.WhatsApp,
                     LinkedIn = entity.ShareUrls.LinkedIn
                 } : null!,
-                Badges = entity.Badges ?? new List<string>(),
-                Highlight = entity.Highlight ?? string.Empty,
                 TestDrive = entity.TestDrive != null ? new TestDriveInfoDto
                 {
                     Available = entity.TestDrive.Available,
@@ -150,7 +150,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                 } : null!,
                 Priority = entity.Priority,
                 IsActive = entity.IsActive,
-                IsFeatured = entity.ListingDetails?.IsFeatured ?? false,
                 StartDate = entity.StartDate,
                 EndDate = entity.EndDate,
                 CreatedAt = entity.CreatedAt,
@@ -158,18 +157,16 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
             };
         }
 
-        // Helper method to handle Seller mapping with flexible field names
+        // Helper method to handle Seller mapping
         private static SellerInfoDto? MapSellerInfo(SellerInfo seller)
         {
             if (seller == null) return null!;
 
             return new SellerInfoDto
             {
-                // Try SellerId first, fallback to empty string
                 UserId = seller.SellerId ?? string.Empty,
                 Name = seller.SellerName ?? string.Empty,
                 Email = seller.Email ?? string.Empty,
-                // Additional fields that might be useful
                 SellerType = seller.SellerType ?? string.Empty,
                 Phone = seller.ContactNumber ?? string.Empty,
                 IsVerified = seller.IsVerifiedSeller,
@@ -178,47 +175,18 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
             };
         }
 
-        public static List<FeaturedVehicleResponseDto> ToResponseDtoList(this IEnumerable<FeaturedVehicle> entities)
+        public static List<UsedVehiclesResponseDto> ToResponseDtoList(this IEnumerable<UsedVehicles> entities)
         {
-            return entities?.Select(e => e.ToResponseDto()).ToList() ?? new List<FeaturedVehicleResponseDto>();
-        }
-
-        // ── Summary DTO for List Views ─────────────────────────────────────────
-
-        public static FeaturedVehicleSummaryDto ToSummaryDto(this FeaturedVehicle entity)
-        {
-            if (entity == null) return null!;
-
-            return new FeaturedVehicleSummaryDto
-            {
-                Id = entity.Id,
-                Title = entity.Title,
-                BrandName = entity.BrandName,
-                ModelName = entity.ModelName,
-                ThumbnailImage = entity.Thumbnail,
-                Price = entity.Price?.Amount ?? 0,
-                FormattedPrice = FormatPrice(entity.Price?.Amount ?? 0, entity.Price?.Currency ?? "INR"),
-                Badges = entity.Badges ?? new List<string>(),
-                Rating = entity.Rating,
-                Priority = entity.Priority,
-                IsActive = entity.IsActive,
-                StartDate = entity.StartDate,
-                EndDate = entity.EndDate
-            };
-        }
-
-        public static List<FeaturedVehicleSummaryDto> ToSummaryDtoList(this IEnumerable<FeaturedVehicle> entities)
-        {
-            return entities?.Select(e => e.ToSummaryDto()).ToList() ?? new List<FeaturedVehicleSummaryDto>();
+            return entities?.Select(e => e.ToResponseDto()).ToList() ?? new List<UsedVehiclesResponseDto>();
         }
 
         // ── Request DTO to Entity ─────────────────────────────────────────────
 
-        public static FeaturedVehicle ToEntity(this FeaturedVehicleRequestDto request)
+        public static UsedVehicles ToEntity(this UsedVehiclesRequestDto request)
         {
             if (request == null) return null!;
 
-            return new FeaturedVehicle
+            return new UsedVehicles
             {
                 Title = request.Title,
                 Descriptions = request.Descriptions,
@@ -247,10 +215,12 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                 }).ToList() ?? new List<VehicleImage>(),
                 Videos = request.Videos?.Select(v => new VehicleMedia
                 {
+                    FileId = v.FileId,
                     FileUrl = v.FileUrl
                 }).ToList() ?? new List<VehicleMedia>(),
                 Shorts = request.Shorts?.Select(s => new VehicleMedia
                 {
+                    FileId = s.FileId,
                     FileUrl = s.FileUrl
                 }).ToList() ?? new List<VehicleMedia>(),
                 Thumbnail = GetThumbnailFromImages(request.Images),
@@ -302,7 +272,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     CreatedAt = DateTime.UtcNow
                 }).ToList() ?? new List<UserRating>(),
                 Rating = CalculateAverageRating(request.UserRatings),
-                // FIXED: Map Seller correctly
                 Seller = request.Seller != null ? new SellerInfo
                 {
                     SellerId = request.Seller.UserId ?? string.Empty,
@@ -311,7 +280,7 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     SellerType = request.Seller.SellerType ?? string.Empty,
                     ContactNumber = request.Seller.Phone ?? string.Empty,
                     IsVerifiedSeller = request.Seller.IsVerified,
-                    DealerName = request.Seller.Name ?? string.Empty,
+                    DealerName = request.Seller.DealerId ?? string.Empty,
                     DealerAddress = request.Seller.Location ?? string.Empty
                 } : null!,
                 Location = request.Location != null ? new LocationInfo
@@ -328,12 +297,14 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     OwnerCount = request.Condition.OwnerCount,
                     KMDriven = request.Condition.KMDriven,
                     Accidental = request.Condition.Accidental,
-                    ServiceHistoryAvailable = request.Condition.ServiceHistoryAvailable
+                    ServiceHistoryAvailable = request.Condition.ServiceHistoryAvailable,
+                    RegistrationYear = request.Condition.RegistrationYear,
+                    RegistrationMonth = request.Condition.RegistrationMonth
                 } : null!,
                 ListingDetails = new ListingDetails
                 {
                     IsAvailable = request.ListingDetails?.IsAvailable ?? true,
-                    IsFeatured = true,
+                    IsFeatured = request.ListingDetails?.IsFeatured ?? false,
                     IsSold = request.ListingDetails?.IsSold ?? false,
                     PostedDate = DateTime.UtcNow,
                     ExpiryDate = request.ListingDetails?.ExpiryDate,
@@ -349,8 +320,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                     Enquiries = 0
                 },
                 ShareUrls = new ShareUrls(),
-                Badges = request.Badges ?? new List<string>(),
-                Highlight = request.Highlight,
                 TestDrive = request.TestDrive != null ? new TestDriveInfo
                 {
                     Available = request.TestDrive.Available,
@@ -367,7 +336,7 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
 
         // ── Update Entity from Request ────────────────────────────────────────
 
-        public static void UpdateFromRequest(this FeaturedVehicle entity, FeaturedVehicleRequestDto request)
+        public static void UpdateFromRequest(this UsedVehicles entity, UsedVehiclesRequestDto request)
         {
             if (entity == null || request == null) return;
 
@@ -402,11 +371,13 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
 
             entity.Videos = request.Videos?.Select(v => new VehicleMedia
             {
+                FileId = v.FileId,
                 FileUrl = v.FileUrl
             }).ToList() ?? new List<VehicleMedia>();
 
             entity.Shorts = request.Shorts?.Select(s => new VehicleMedia
             {
+                FileId = s.FileId,
                 FileUrl = s.FileUrl
             }).ToList() ?? new List<VehicleMedia>();
 
@@ -454,9 +425,16 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
                 TagName = t.TagName
             }).ToList() ?? new List<TagItem>();
 
+            entity.UserRatings = request.UserRatings?.Select(ur => new UserRating
+            {
+                UserId = ur.UserId,
+                Rating = ur.Rating,
+                Comment = ur.Comment,
+                CreatedAt = ur.CreatedAt == default ? DateTime.UtcNow : ur.CreatedAt
+            }).ToList() ?? new List<UserRating>();
+
             entity.Rating = CalculateAverageRating(entity.UserRatings);
 
-            // FIXED: Update Seller properly
             if (entity.Seller == null) entity.Seller = new SellerInfo();
             entity.Seller.SellerId = request.Seller?.UserId ?? entity.Seller.SellerId;
             entity.Seller.SellerName = request.Seller?.Name ?? entity.Seller.SellerName;
@@ -480,17 +458,17 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
             entity.Condition.KMDriven = request.Condition?.KMDriven ?? 0;
             entity.Condition.Accidental = request.Condition?.Accidental ?? false;
             entity.Condition.ServiceHistoryAvailable = request.Condition?.ServiceHistoryAvailable ?? true;
+            entity.Condition.RegistrationYear = request.Condition != null ? request.Condition.RegistrationYear : 0;
+            entity.Condition.RegistrationMonth = request.Condition != null ? request.Condition.RegistrationMonth : 0;
 
             if (entity.ListingDetails == null) entity.ListingDetails = new ListingDetails();
             entity.ListingDetails.IsAvailable = request.ListingDetails?.IsAvailable ?? true;
+            entity.ListingDetails.IsFeatured = request.ListingDetails?.IsFeatured ?? false;
             entity.ListingDetails.IsSold = request.ListingDetails?.IsSold ?? false;
             entity.ListingDetails.ExpiryDate = request.ListingDetails?.ExpiryDate;
             entity.ListingDetails.IsVerified = request.ListingDetails?.IsVerified ?? false;
             entity.ListingDetails.VerifiedBy = request.ListingDetails?.VerifiedBy ?? string.Empty;
             entity.ListingDetails.VerificationDate = request.ListingDetails?.VerificationDate;
-
-            entity.Badges = request.Badges ?? new List<string>();
-            entity.Highlight = request.Highlight;
 
             if (entity.TestDrive == null) entity.TestDrive = new TestDriveInfo();
             entity.TestDrive.Available = request.TestDrive?.Available ?? true;
@@ -503,86 +481,6 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
             entity.UpdatedAt = DateTime.UtcNow;
         }
 
-        // ── Featured Vehicle Specific Operations ─────────────────────────────
-
-        public static void UpdatePriority(this FeaturedVehicle entity, int priority)
-        {
-            if (entity == null) return;
-            entity.Priority = priority;
-            entity.UpdatedAt = DateTime.UtcNow;
-        }
-
-        public static void Activate(this FeaturedVehicle entity, DateTime? endDate = null)
-        {
-            if (entity == null) return;
-            entity.IsActive = true;
-            entity.StartDate = DateTime.UtcNow;
-            entity.EndDate = endDate;
-            entity.UpdatedAt = DateTime.UtcNow;
-        }
-
-        public static void Deactivate(this FeaturedVehicle entity)
-        {
-            if (entity == null) return;
-            entity.IsActive = false;
-            entity.UpdatedAt = DateTime.UtcNow;
-        }
-
-        public static void AddRating(this FeaturedVehicle entity, UserRatingDto rating)
-        {
-            if (entity == null || rating == null) return;
-
-            if (entity.UserRatings == null)
-                entity.UserRatings = new List<UserRating>();
-
-            entity.UserRatings.Add(new UserRating
-            {
-                UserId = rating.UserId,
-                Rating = rating.Rating,
-                Comment = rating.Comment,
-                CreatedAt = DateTime.UtcNow
-            });
-
-            entity.Rating = CalculateAverageRating(entity.UserRatings);
-            entity.UpdatedAt = DateTime.UtcNow;
-        }
-
-        public static void IncrementEngagement(this FeaturedVehicle entity, string metricType)
-        {
-            if (entity == null) return;
-
-            if (entity.Engagement == null)
-                entity.Engagement = new EngagementMetrics();
-
-            switch (metricType.ToLower())
-            {
-                case "views":
-                    entity.Engagement.Views++;
-                    break;
-                case "likes":
-                    entity.Engagement.Likes++;
-                    break;
-                case "shares":
-                    entity.Engagement.Shares++;
-                    break;
-                case "enquiries":
-                    entity.Engagement.Enquiries++;
-                    break;
-            }
-
-            entity.UpdatedAt = DateTime.UtcNow;
-        }
-
-        public static bool IsCurrentlyFeatured(this FeaturedVehicle entity)
-        {
-            if (entity == null) return false;
-
-            return entity.IsActive &&
-                   entity.ListingDetails?.IsAvailable == true &&
-                   entity.StartDate <= DateTime.UtcNow &&
-                   (!entity.EndDate.HasValue || entity.EndDate.Value >= DateTime.UtcNow);
-        }
-
         // ── Private Helpers ───────────────────────────────────────────────────
 
         private static string GenerateSlug(string brandName, string modelName)
@@ -592,31 +490,11 @@ namespace AutoNext.Platform.Listings.API.Models.Mappers
 
             var slug = $"{brandName}-{modelName}".ToLower();
             slug = slug.Replace(" ", "-");
-            slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[^a-z0-9-]", "");
+            slug = Regex.Replace(slug, @"[^a-z0-9-]", "");
             return slug.Trim('-');
         }
 
-        private static string FormatPrice(decimal price, string currency)
-        {
-            if (price >= 10000000) // 1 Crore+
-                return $"{currency} {price / 10000000:0.##} Crore";
-            if (price >= 100000) // 1 Lakh+
-                return $"{currency} {price / 100000:0.##} Lakh";
-            return $"{currency} {price:N0}";
-        }
-
-        private static string GetPriceRange(decimal? amount, string rangeFrom, string rangeTo)
-        {
-            if (!string.IsNullOrEmpty(rangeFrom) && !string.IsNullOrEmpty(rangeTo))
-                return $"{rangeFrom} - {rangeTo}";
-
-            if (amount.HasValue && amount.Value > 0)
-                return FormatPrice(amount.Value, "₹");
-
-            return "Price on request";
-        }
-
-        private static string GetThumbnailFromImages(List<ImageDto>? images)
+        private static string GetThumbnailFromImages(List<VehicleImageDto>? images)
         {
             if (images == null || !images.Any())
                 return string.Empty;

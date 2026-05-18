@@ -10,6 +10,8 @@
 
         IPremiumVehicleRepository PremiumVehicles { get; }
 
+        IUsedVehiclesRepository UsedVehicles { get; }
+
         Task<int> SaveChangesAsync();
     }
 }

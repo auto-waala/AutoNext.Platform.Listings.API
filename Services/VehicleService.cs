@@ -110,16 +110,13 @@ namespace AutoNext.Platform.Listings.API.Services
                 // ── Seller (structured + legacy flat fields) ──────────────────
                 Seller = new SellerInfo
                 {
-                    UserId = sellerId,
-                    Name = request.Seller.Name,
-                    Phone = request.Seller.Phone,
+                    SellerId = sellerId,
+                    SellerName = request.Seller.Name,
+                    ContactNumber = request.Seller.Phone,
                     Email = request.Seller.Email,
                     SellerType = request.Seller.SellerType,
-                    DealerId = request.Seller.DealerId,
-                    StoreId = request.Seller.StoreId,
-                    Location = request.Seller.Location,
-                    ChatEnabled = request.Seller.ChatEnabled,
-                    CallEnabled = request.Seller.CallEnabled
+                    DealerName = request.Seller.DealerId,
+                    DealerAddress = request.Seller.Location,
                 },
 
                 // Legacy flat seller fields

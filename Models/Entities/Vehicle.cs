@@ -197,47 +197,6 @@ namespace AutoNext.Platform.Listings.API.Models.Entities
         public int OwnershipCount { get; set; } = 1;
     }
 
-    /// <summary>
-    /// Embedded seller information.
-    /// <c>UserId</c> is used for the seller index.
-    /// </summary>
-    public class SellerInfo
-    {
-        /// <summary>Linked user account ID — used for index.</summary>
-        [BsonElement("user_id")]
-        public string UserId { get; set; } = string.Empty;
-
-        [BsonElement("name")]
-        public string Name { get; set; } = string.Empty;
-
-        [BsonElement("phone")]
-        public string Phone { get; set; } = string.Empty;
-
-        [BsonElement("email")]
-        public string Email { get; set; } = string.Empty;
-
-        /// <summary>Dealer or Individual.</summary>
-        [BsonElement("seller_type")]
-        public string SellerType { get; set; } = "Individual";
-
-        [BsonElement("dealer_id")]
-        public string? DealerId { get; set; }
-
-        [BsonElement("store_id")]
-        public string? StoreId { get; set; }
-
-        [BsonElement("location")]
-        public string? Location { get; set; }
-
-        [BsonElement("chat_enabled")]
-        public bool ChatEnabled { get; set; } = true;
-
-        [BsonElement("call_enabled")]
-        public bool CallEnabled { get; set; } = true;
-
-        [BsonElement("is_verified")]
-        public bool IsVerified { get; set; } = false;
-    }
 
     /// <summary>
     /// Expert inspection report attached to a listing.
